@@ -15,16 +15,18 @@
   body { margin: 0; font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); background-image: radial-gradient(circle at 20% 10%, rgba(184,69,31,0.05), transparent 50%), radial-gradient(circle at 80% 90%, rgba(74,107,58,0.05), transparent 50%); color: var(--ink); line-height: 1.55; font-size: 16px; -webkit-font-smoothing: antialiased; padding-bottom: 80px; }
   .container { max-width: 780px; margin: 0 auto; padding: 24px 18px; }
 
-  .auth-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; }
-  .auth-status { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
-  .auth-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); }
+  .auth-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; gap: 8px; }
+  .auth-status { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); min-width: 0; flex: 1; }
+  .auth-status > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .auth-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); flex-shrink: 0; }
   .auth-status.online .dot { background: var(--green); }
   .auth-status.local-only .dot { background: var(--amber); }
   .auth-email { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink); font-weight: 600; }
-  .auth-btn { background: var(--ink); color: var(--bg); border: none; border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; }
+  .auth-btn { background: var(--ink); color: var(--bg); border: none; border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; flex-shrink: 0; }
   .auth-btn:hover { background: var(--accent); }
   .auth-btn.secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); }
   .auth-btn.secondary:hover { color: var(--accent); border-color: var(--accent); }
+  #auth-actions { flex-shrink: 0; }
 
   .modal-backdrop { position: fixed; inset: 0; background: rgba(31,26,20,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .modal-backdrop.show { opacity: 1; pointer-events: auto; }
@@ -243,24 +245,267 @@
   .toast.success { background: var(--green); }
   .toast.error { background: var(--red); }
 
+  /* =========== PRELOADER =========== */
+  .preloader {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 20% 10%, rgba(184,69,31,0.05), transparent 50%), radial-gradient(circle at 80% 90%, rgba(74,107,58,0.05), transparent 50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.4s ease;
+    padding: 20px;
+  }
+  .preloader.fading { opacity: 0; pointer-events: none; }
+  .preloader.hidden { display: none; }
+  .preloader-mark {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(48px, 10vw, 72px);
+    font-weight: 300;
+    color: var(--ink);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .preloader-mark em { font-style: italic; color: var(--accent); }
+  .preloader-text {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .preloader-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .preloader-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: dot-pulse 1.4s ease-in-out infinite;
+  }
+  .preloader-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .preloader-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot-pulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* =========== LOGIN GATE =========== */
+  .login-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 20% 10%, rgba(184,69,31,0.05), transparent 50%), radial-gradient(circle at 80% 90%, rgba(74,107,58,0.05), transparent 50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    padding: 24px;
+    overflow-y: auto;
+  }
+  .login-gate.show { display: flex; }
+  .login-card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 36px 28px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(31,26,20,0.1);
+    text-align: center;
+  }
+  .login-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .login-card h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: clamp(28px, 6vw, 36px);
+    line-height: 1.1;
+    margin: 0 0 10px;
+    letter-spacing: -0.02em;
+  }
+  .login-card h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .login-card p {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 0 0 24px;
+    line-height: 1.55;
+  }
+  .login-card .modal-input { font-size: 16px; /* prevents iOS zoom on focus */ }
+  .login-card .modal-btn { padding: 14px; font-size: 15px; }
+  .login-help-text {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+  .login-skip {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--rule);
+  }
+  .login-skip button {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    font-size: 11px;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+  }
+  .login-skip button:hover { color: var(--accent); }
+
   footer { text-align: center; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.08em; }
 
-  @media (max-width: 480px) {
-    .container { padding: 16px 12px; }
+  /* =========== MOBILE RESPONSIVE =========== */
+  @media (max-width: 640px) {
+    body { font-size: 15px; padding-bottom: 60px; }
+    .container { padding: 14px 12px; }
+
+    /* Auth bar */
+    .auth-bar { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
+    .auth-btn { padding: 7px 12px; font-size: 11px; min-height: 32px; }
+
+    /* Header */
+    header { padding: 8px 0 16px; margin-bottom: 16px; }
+    h1 { font-size: clamp(26px, 7vw, 36px); }
+    .subtitle { font-size: 12px; }
+    .diet-badge { font-size: 9px; padding: 3px 10px; }
+
+    /* Day selector - bigger tap targets */
+    .day-selector { gap: 5px; padding: 2px 0; margin-bottom: 14px; }
+    .day-pill { min-width: 52px; padding: 9px 8px; min-height: 56px; }
+    .day-pill .day-short { font-size: 9px; margin-bottom: 1px; }
+    .day-pill .day-num { font-size: 15px; }
+
+    /* Tabs - scrollable horizontal */
+    .tabs { padding: 3px; margin-bottom: 16px; }
+    .tab { padding: 9px 11px; font-size: 11px; min-height: 36px; }
+
+    /* Cards */
+    .card { padding: 18px 18px; margin-bottom: 12px; border-radius: 14px; }
+    .card h2 { font-size: 19px; }
+    .card-sub { font-size: 12px; margin-bottom: 12px; }
+
+    /* Totals grid - keep 4 cols but smaller */
+    .totals-grid { gap: 5px; }
+    .total-box { padding: 10px 4px; border-radius: 8px; }
+    .total-value { font-size: 18px; }
+    .total-label { font-size: 9px; letter-spacing: 0.08em; }
+
+    /* Meal cards */
+    .meal { border-radius: 12px; margin-bottom: 10px; }
     .meal-head { padding: 14px 14px 10px; }
-    .options { padding: 0 10px 10px; }
-    .meal-title { font-size: 18px; }
-    .cook-head, .cook-body { padding: 12px 14px; }
-    .cook-title { font-size: 16px; }
-    .day-pill { min-width: 56px; padding: 8px 10px; }
-    .session-name { font-size: 22px; }
-    .form-row { grid-template-columns: repeat(2, 1fr); }
+    .meal-title { font-size: 17px; }
+    .meal-time { font-size: 9px; padding: 3px 8px; }
+    .options { padding: 0 10px 12px; gap: 5px; }
+    .option-header { padding: 10px 12px; gap: 10px; min-height: 48px; }
+    .option-name { font-size: 13px; }
+    .option-macros { font-size: 10px; }
+    .option-eaten { padding: 5px 8px; min-height: 32px; min-width: 56px; }
+    .eaten-label { font-size: 9px; }
+
+    /* Cooking */
+    .session-header { margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .session-name { font-size: 20px; }
+    .session-budget { font-size: 10px; padding: 5px 10px; }
+    .day-banner { padding: 14px 16px; }
+    .day-banner-name { font-size: 18px; }
+    .day-banner-type { font-size: 9px; }
+    .total-time-pill { font-size: 10px; padding: 5px 10px; }
+    .cook-head { padding: 12px 14px; }
+    .cook-body { padding: 14px; }
+    .cook-title { font-size: 15px; }
+    .cook-section { margin-bottom: 12px; }
+    .ingredient-list, .steps-list { font-size: 12px; }
+    .steps-list li { padding-left: 26px; margin-bottom: 6px; }
+    .steps-list li::before { width: 18px; height: 18px; font-size: 10px; }
+
+    /* Forms */
+    .form-input { padding: 11px 12px; font-size: 16px; /* prevents iOS zoom */ }
+    .form-row { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .form-row-meta { gap: 6px; }
+    .form-label { font-size: 9px; margin-bottom: 5px; }
+    .btn { padding: 13px 18px; font-size: 14px; min-height: 46px; }
+    .btn-grid { grid-template-columns: 1fr; gap: 8px; }
+
+    /* Analytics */
+    .analytics-summary { grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+    .analytics-box { padding: 11px 8px; }
+    .analytics-box-label { font-size: 8px; }
+    .analytics-box-value { font-size: 18px; }
+    .analytics-box-sub { font-size: 9px; }
+    .compare-bar-tag { width: 30px; font-size: 7px; }
+    .compare-value { font-size: 10px; }
+
+    /* Shopping */
+    .shop-section { padding: 14px 16px; }
+    .shop-list li { padding: 10px 0; font-size: 13px; min-height: 36px; }
+    .shop-check { width: 20px; height: 20px; }
+
+    /* Modal */
+    .modal { padding: 24px 22px; border-radius: 14px; }
+    .modal h2 { font-size: 22px; }
+    .modal p { font-size: 12px; margin-bottom: 14px; }
+    .modal-input { padding: 13px 14px; font-size: 16px; /* iOS no-zoom */ }
+    .modal-btn { padding: 13px; font-size: 14px; min-height: 46px; }
+
+    /* Extras */
+    .extra-item { padding: 10px 12px; flex-wrap: wrap; }
+    .extra-name { font-size: 13px; }
+    .extra-meta { font-size: 10px; }
+  }
+
+  /* Very small phones */
+  @media (max-width: 380px) {
+    h1 { font-size: 24px; }
+    .total-value { font-size: 16px; }
     .analytics-summary { grid-template-columns: 1fr; }
-    .btn-grid { grid-template-columns: 1fr; }
+    .day-pill { min-width: 48px; padding: 8px 6px; }
   }
 </style>
 </head>
 <body>
+
+  <!-- PRELOADER -->
+  <div class="preloader" id="preloader">
+    <div class="preloader-mark">utkarsh<em>.</em></div>
+    <div class="preloader-text">Daily Meal System</div>
+    <div class="preloader-dots"><span></span><span></span><span></span></div>
+  </div>
+
+  <!-- LOGIN GATE -->
+  <div class="login-gate" id="login-gate">
+    <div class="login-card">
+      <div class="login-eyebrow">Daily Meal System</div>
+      <h1>Welcome <em>back</em></h1>
+      <p>Sign in to access your meal plan. Your data syncs across all your devices.</p>
+      <input type="email" class="modal-input" id="gate-email-input" placeholder="you@example.com" autocomplete="email" />
+      <input type="password" class="modal-input" id="gate-password-input" placeholder="Password (min 6 characters)" autocomplete="current-password" />
+      <button class="modal-btn" id="gate-submit">Sign In</button>
+      <button class="modal-btn cancel" id="gate-toggle-mode">New here? Create an account</button>
+      <p class="login-help-text">No email verification. Password is hashed and stored securely by Supabase.</p>
+      <div class="login-skip">
+        <button id="gate-skip">Continue without sync (local only)</button>
+      </div>
+    </div>
+  </div>
 
   <!-- AUTH MODAL -->
   <div class="modal-backdrop" id="auth-modal">
@@ -674,14 +919,52 @@ function save() { saveTrackingLocal(); scheduleSync(); }
 // AUTH
 // =================================================================
 async function initAuth() {
-  if (!sb) { updateAuthStatus('disabled'); return; }
+  if (!sb) {
+    // Sync disabled - skip login gate, go straight to app
+    updateAuthStatus('disabled');
+    hidePreloader();
+    return;
+  }
   const { data: { session } } = await sb.auth.getSession();
-  if (session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); }
-  else updateAuthStatus('signed-out');
+  if (session) {
+    currentUser = session.user;
+    await onSignedIn();
+    updateAuthStatus('online');
+    hidePreloader();
+  } else {
+    // No session - show login gate
+    updateAuthStatus('signed-out');
+    showLoginGate();
+    hidePreloader();
+  }
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); showToast('Signed in · syncing', 'success'); }
-    else if (event === 'SIGNED_OUT') { currentUser = null; updateAuthStatus('signed-out'); }
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      await onSignedIn();
+      updateAuthStatus('online');
+      hideLoginGate();
+      showToast('Signed in · syncing', 'success');
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      updateAuthStatus('signed-out');
+      showLoginGate();
+    }
   });
+}
+
+function hidePreloader() {
+  const p = document.getElementById('preloader');
+  p.classList.add('fading');
+  setTimeout(() => p.classList.add('hidden'), 400);
+}
+
+function showLoginGate() {
+  if (!sb) return; // never show gate if sync disabled
+  document.getElementById('login-gate').classList.add('show');
+}
+
+function hideLoginGate() {
+  document.getElementById('login-gate').classList.remove('show');
 }
 
 async function onSignedIn() {
@@ -713,7 +996,55 @@ async function onSignedIn() {
   renderAll();
 }
 
-let authMode = 'signin'; // 'signin' or 'signup'
+let gateMode = 'signin';
+
+function toggleGateMode() {
+  gateMode = gateMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('gate-submit').textContent = gateMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('gate-toggle-mode').textContent = gateMode === 'signin'
+    ? 'New here? Create an account'
+    : 'Already have an account? Sign in';
+  document.getElementById('gate-password-input').setAttribute('autocomplete', gateMode === 'signin' ? 'current-password' : 'new-password');
+}
+
+async function submitGate() {
+  const email = document.getElementById('gate-email-input').value.trim();
+  const password = document.getElementById('gate-password-input').value;
+  if (!email || !password) { showToast('Email and password required', 'error'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+  if (!sb) { showToast('Sync not configured', 'error'); return; }
+
+  const submitBtn = document.getElementById('gate-submit');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = gateMode === 'signin' ? 'Signing in...' : 'Creating account...';
+
+  try {
+    let result;
+    if (gateMode === 'signin') {
+      result = await sb.auth.signInWithPassword({ email, password });
+    } else {
+      result = await sb.auth.signUp({ email, password });
+    }
+    if (result.error) throw result.error;
+    document.getElementById('gate-email-input').value = '';
+    document.getElementById('gate-password-input').value = '';
+    showToast(gateMode === 'signin' ? 'Signed in' : 'Account created', 'success');
+  } catch (e) {
+    showToast(e.message || 'Auth failed', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+}
+
+function skipLogin() {
+  if (!confirm('Continue without sync? Your data will only be saved on this device. You can sign in later from the auth bar at the top.')) return;
+  hideLoginGate();
+  showToast('Using local mode', 'success');
+}
+
+let authMode = 'signin'; // for modal (still used for sign out → sign back in flow)
 
 function toggleAuthMode() {
   authMode = authMode === 'signin' ? 'signup' : 'signin';
@@ -1235,10 +1566,25 @@ document.getElementById('auth-email-input').addEventListener('keydown', (e) => {
 document.getElementById('auth-modal').addEventListener('click', (e) => {
   if (e.target.id === 'auth-modal') document.getElementById('auth-modal').classList.remove('show');
 });
+
+// LOGIN GATE listeners
+document.getElementById('gate-submit').addEventListener('click', submitGate);
+document.getElementById('gate-toggle-mode').addEventListener('click', toggleGateMode);
+document.getElementById('gate-skip').addEventListener('click', skipLogin);
+document.getElementById('gate-password-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitGate(); });
+document.getElementById('gate-email-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('gate-password-input').focus(); });
+
 // Bind the initial sign-in button (will rebind after every updateAuthStatus call)
 attachAuthButtonListeners();
 
 renderAll();
+
+// Safety: ensure preloader hides even if initAuth hangs
+setTimeout(() => {
+  const p = document.getElementById('preloader');
+  if (p && !p.classList.contains('hidden')) hidePreloader();
+}, 5000);
+
 initAuth();
 </script>
 </body>
