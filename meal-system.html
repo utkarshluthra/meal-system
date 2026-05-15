@@ -435,9 +435,9 @@
 const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL_HERE';
 const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
 const SYNC_ENABLED = !SUPABASE_URL.includes('YOUR_SUPABASE') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE');
-let supabase = null;
+let sb = null;
 let currentUser = null;
-if (SYNC_ENABLED) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (SYNC_ENABLED) sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // =================================================================
 // DEFAULT DIET (ships with the app — starter template)
@@ -614,17 +614,17 @@ function saveDietLocal() {
 }
 
 async function pushDietToCloud() {
-  if (!supabase || !currentUser) return;
+  if (!sb || !currentUser) return;
   try {
-    const { error } = await supabase.from('user_diets').upsert({ user_id: currentUser.id, diet, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const { error } = await sb.from('user_diets').upsert({ user_id: currentUser.id, diet, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
   } catch (e) { console.warn('Diet cloud push failed:', e); }
 }
 
 async function pullDietFromCloud() {
-  if (!supabase || !currentUser) return null;
+  if (!sb || !currentUser) return null;
   try {
-    const { data, error } = await supabase.from('user_diets').select('diet').eq('user_id', currentUser.id).single();
+    const { data, error } = await sb.from('user_diets').select('diet').eq('user_id', currentUser.id).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data ? data.diet : null;
   } catch (e) { console.warn('Diet cloud pull failed:', e); return null; }
@@ -642,25 +642,25 @@ function saveTrackingLocal() {
 }
 
 function scheduleSync() {
-  if (!supabase || !currentUser) return;
+  if (!sb || !currentUser) return;
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(pushTrackingToCloud, 2000);
   updateAuthStatus('syncing');
 }
 
 async function pushTrackingToCloud() {
-  if (!supabase || !currentUser) return;
+  if (!sb || !currentUser) return;
   try {
-    const { error } = await supabase.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: todayDateKey }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const { error } = await sb.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: todayDateKey }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
     updateAuthStatus('online');
   } catch (e) { updateAuthStatus('offline'); }
 }
 
 async function pullTrackingFromCloud() {
-  if (!supabase || !currentUser) return null;
+  if (!sb || !currentUser) return null;
   try {
-    const { data, error } = await supabase.from('meal_data').select('data, updated_at').eq('user_id', currentUser.id).single();
+    const { data, error } = await sb.from('meal_data').select('data, updated_at').eq('user_id', currentUser.id).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data ? { ...data.data, updated_at: data.updated_at } : null;
   } catch (e) { return null; }
@@ -672,11 +672,11 @@ function save() { saveTrackingLocal(); scheduleSync(); }
 // AUTH
 // =================================================================
 async function initAuth() {
-  if (!supabase) { updateAuthStatus('disabled'); return; }
-  const { data: { session } } = await supabase.auth.getSession();
+  if (!sb) { updateAuthStatus('disabled'); return; }
+  const { data: { session } } = await sb.auth.getSession();
   if (session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); }
   else updateAuthStatus('signed-out');
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); showToast('Signed in · syncing', 'success'); }
     else if (event === 'SIGNED_OUT') { currentUser = null; updateAuthStatus('signed-out'); }
   });
@@ -714,9 +714,9 @@ async function onSignedIn() {
 async function sendMagicLink() {
   const email = document.getElementById('auth-email-input').value.trim();
   if (!email) { showToast('Enter email', 'error'); return; }
-  if (!supabase) { showToast('Sync not configured', 'error'); return; }
+  if (!sb) { showToast('Sync not configured', 'error'); return; }
   try {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
     if (error) throw error;
     showToast('Check email for link', 'success');
     document.getElementById('auth-modal').classList.remove('show');
@@ -724,8 +724,8 @@ async function sendMagicLink() {
 }
 
 async function signOut() {
-  if (!supabase) return;
-  await supabase.auth.signOut();
+  if (!sb) return;
+  await sb.auth.signOut();
   currentUser = null;
   updateAuthStatus('signed-out');
   showToast('Signed out', 'success');
