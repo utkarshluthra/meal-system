@@ -265,12 +265,14 @@
   <!-- AUTH MODAL -->
   <div class="modal-backdrop" id="auth-modal">
     <div class="modal">
-      <h2>Sign in to <em>sync</em></h2>
-      <p>Enter your email. We'll send you a magic link — click it to sign in. Your diet and meal data sync across devices.</p>
-      <input type="email" class="modal-input" id="auth-email-input" placeholder="you@example.com" />
-      <button class="modal-btn" id="auth-send">Send Magic Link</button>
+      <h2 id="auth-modal-title">Sign in to <em>sync</em></h2>
+      <p id="auth-modal-desc">Enter your email and password. Data syncs across devices.</p>
+      <input type="email" class="modal-input" id="auth-email-input" placeholder="you@example.com" autocomplete="email" />
+      <input type="password" class="modal-input" id="auth-password-input" placeholder="Password (min 6 characters)" autocomplete="current-password" />
+      <button class="modal-btn" id="auth-submit">Sign In</button>
+      <button class="modal-btn cancel" id="auth-toggle-mode">New here? Create an account</button>
       <button class="modal-btn cancel" id="auth-cancel">Cancel</button>
-      <p class="modal-help">First time? Just enter your email — we'll create an account. The default diet loads automatically; upload your own when ready.</p>
+      <p class="modal-help">No email verification needed. Your password is hashed and stored securely by Supabase.</p>
     </div>
   </div>
 
@@ -711,16 +713,53 @@ async function onSignedIn() {
   renderAll();
 }
 
-async function sendMagicLink() {
+let authMode = 'signin'; // 'signin' or 'signup'
+
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  document.getElementById('auth-modal-title').innerHTML = authMode === 'signin'
+    ? 'Sign in to <em>sync</em>'
+    : 'Create your <em>account</em>';
+  document.getElementById('auth-modal-desc').textContent = authMode === 'signin'
+    ? 'Enter your email and password. Data syncs across devices.'
+    : 'Pick an email and password. We\'ll create your account instantly.';
+  document.getElementById('auth-submit').textContent = authMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-toggle-mode').textContent = authMode === 'signin'
+    ? 'New here? Create an account'
+    : 'Already have an account? Sign in';
+  document.getElementById('auth-password-input').setAttribute('autocomplete', authMode === 'signin' ? 'current-password' : 'new-password');
+}
+
+async function submitAuth() {
   const email = document.getElementById('auth-email-input').value.trim();
-  if (!email) { showToast('Enter email', 'error'); return; }
+  const password = document.getElementById('auth-password-input').value;
+  if (!email || !password) { showToast('Email and password required', 'error'); return; }
+  if (password.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
   if (!sb) { showToast('Sync not configured', 'error'); return; }
+
+  const submitBtn = document.getElementById('auth-submit');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = authMode === 'signin' ? 'Signing in...' : 'Creating account...';
+
   try {
-    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
-    if (error) throw error;
-    showToast('Check email for link', 'success');
+    let result;
+    if (authMode === 'signin') {
+      result = await sb.auth.signInWithPassword({ email, password });
+    } else {
+      result = await sb.auth.signUp({ email, password });
+    }
+    if (result.error) throw result.error;
     document.getElementById('auth-modal').classList.remove('show');
-  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+    document.getElementById('auth-email-input').value = '';
+    document.getElementById('auth-password-input').value = '';
+    showToast(authMode === 'signin' ? 'Signed in' : 'Account created', 'success');
+  } catch (e) {
+    showToast(e.message || 'Auth failed', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
 }
 
 async function signOut() {
@@ -1186,8 +1225,12 @@ document.getElementById('btn-diet-download').addEventListener('click', downloadD
 document.getElementById('btn-diet-template').addEventListener('click', downloadDietTemplate);
 document.getElementById('btn-diet-reset').addEventListener('click', resetDiet);
 document.getElementById('file-diet-import').addEventListener('change', handleDietImport);
-document.getElementById('auth-send').addEventListener('click', sendMagicLink);
+document.getElementById('auth-submit').addEventListener('click', submitAuth);
+document.getElementById('auth-toggle-mode').addEventListener('click', toggleAuthMode);
 document.getElementById('auth-cancel').addEventListener('click', () => document.getElementById('auth-modal').classList.remove('show'));
+// Allow Enter key to submit
+document.getElementById('auth-password-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });
+document.getElementById('auth-email-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('auth-password-input').focus(); });
 // Close modal when clicking the backdrop (outside the modal box)
 document.getElementById('auth-modal').addEventListener('click', (e) => {
   if (e.target.id === 'auth-modal') document.getElementById('auth-modal').classList.remove('show');
