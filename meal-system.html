@@ -432,8 +432,8 @@
 // =================================================================
 // SUPABASE CONFIG — paste your keys here
 // =================================================================
-const SUPABASE_URL = 'https://ksucjrvjlwspniogynkf.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzdWNqcnZqbHdzcG5pb2d5bmtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NjEwNjIsImV4cCI6MjA5NDQzNzA2Mn0.CAd3_8bMFHrmfNFEfgfgoVuNMujKG_WV3jqwRdqjwv4';
+const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL_HERE';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY_HERE';
 const SYNC_ENABLED = !SUPABASE_URL.includes('YOUR_SUPABASE') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE');
 let supabase = null;
 let currentUser = null;
@@ -593,9 +593,19 @@ function loadDiet() {
     if (raw) {
       const parsed = JSON.parse(raw);
       const err = validateDiet(parsed);
-      if (!err) return parsed;
+      if (!err) {
+        console.log('[Diet] Loaded from localStorage:', parsed.name);
+        return parsed;
+      } else {
+        console.warn('[Diet] Stored diet invalid:', err, '— clearing and using default');
+        localStorage.removeItem(DIET_KEY); // clear bad data
+      }
     }
-  } catch (e) { console.warn('Diet load failed, using default:', e); }
+  } catch (e) {
+    console.warn('[Diet] Load failed, using default:', e);
+    localStorage.removeItem(DIET_KEY);
+  }
+  console.log('[Diet] Using default diet');
   return JSON.parse(JSON.stringify(DEFAULT_DIET)); // deep clone
 }
 
@@ -778,22 +788,29 @@ function renderHeader() {
 
 function renderDaySelector() {
   const container = document.getElementById('day-selector');
-  const ordered = ['mon','tue','wed','thu','fri','sat','sun'].map(id => diet.days.find(d => d.id === id) || { id, short: id.slice(0,3), label: id, batch: false });
+  const days = (diet && Array.isArray(diet.days)) ? diet.days : DEFAULT_DIET.days;
+  const ordered = ['mon','tue','wed','thu','fri','sat','sun'].map(id => days.find(d => d.id === id) || { id, short: id.slice(0,3), label: id, batch: false });
   container.innerHTML = ordered.map(d => `<button class="day-pill ${d.id === currentDay ? 'active' : ''} ${d.batch ? 'batch' : ''}" data-day="${d.id}"><span class="day-short">${d.short}</span><span class="day-num">${(d.label || d.id).slice(0,3)}</span></button>`).join('');
   container.querySelectorAll('.day-pill').forEach(btn => btn.addEventListener('click', () => { currentDay = btn.dataset.day; renderDaySelector(); renderCooking(); }));
 }
 
 function renderMeals() {
   const container = document.getElementById('meals-container');
+  if (!diet || !Array.isArray(diet.meals)) {
+    container.innerHTML = `<div class="empty-state"><span class="big">Diet not loaded</span>Try resetting the diet in the Diet tab.</div>`;
+    return;
+  }
   container.innerHTML = diet.meals.map(meal => {
     const isForced = meal.forced;
-    const optsHTML = meal.options.map(opt => {
+    const options = Array.isArray(meal.options) ? meal.options : [];
+    const optsHTML = options.map(opt => {
+      const macros = opt.macros || { cal: 0, pro: 0, car: 0, fat: 0 };
       const isSelected = selected[meal.id] === opt.id;
       const ateKey = meal.id + '-' + opt.id;
       const isAte = ateState[ateKey];
-      return `<div class="option ${isSelected ? 'selected' : ''}" data-meal="${meal.id}" data-opt="${opt.id}"><div class="option-header">${!isForced ? '<div class="option-radio" data-action="select"></div>' : '<div style="width:16px;"></div>'}<div class="option-main" data-action="select"><div class="option-name">${opt.name}</div><div class="option-macros">${opt.macros.cal} kcal · ${opt.macros.pro}P / ${opt.macros.car}C / ${opt.macros.fat}F</div></div><button class="option-eaten ${isAte ? 'checked' : ''}" data-action="ate"><div class="eaten-box"></div><span class="eaten-label">Ate</span></button></div></div>`;
+      return `<div class="option ${isSelected ? 'selected' : ''}" data-meal="${meal.id}" data-opt="${opt.id}"><div class="option-header">${!isForced ? '<div class="option-radio" data-action="select"></div>' : '<div style="width:16px;"></div>'}<div class="option-main" data-action="select"><div class="option-name">${opt.name || 'Unnamed'}</div><div class="option-macros">${macros.cal || 0} kcal · ${macros.pro || 0}P / ${macros.car || 0}C / ${macros.fat || 0}F</div></div><button class="option-eaten ${isAte ? 'checked' : ''}" data-action="ate"><div class="eaten-box"></div><span class="eaten-label">Ate</span></button></div></div>`;
     }).join('');
-    return `<section class="meal"><div class="meal-head"><div class="meal-head-top"><h2 class="meal-title">${meal.title}</h2><span class="meal-time">${meal.time}</span></div>${meal.desc ? `<p class="meal-desc">${meal.desc}</p>` : ''}</div><div class="options">${optsHTML}</div></section>`;
+    return `<section class="meal"><div class="meal-head"><div class="meal-head-top"><h2 class="meal-title">${meal.title || meal.id}</h2><span class="meal-time">${meal.time || ''}</span></div>${meal.desc ? `<p class="meal-desc">${meal.desc}</p>` : ''}</div><div class="options">${optsHTML}</div></section>`;
   }).join('');
   container.querySelectorAll('.option').forEach(el => {
     const mealId = el.dataset.meal; const optId = el.dataset.opt;
@@ -1111,9 +1128,18 @@ function showToast(msg, type) {
 }
 
 function renderAll() {
-  renderHeader(); renderDaySelector(); renderMeals(); updateTotals(); renderCooking(); renderExtras(); renderAnalytics();
-  renderShopList('weekly-container', diet.weeklyShop); renderShopList('monthly-container', diet.monthlyShop);
-  renderRules(); renderDietTab(); renderStorageInfo();
+  try { renderHeader(); } catch (e) { console.error('[Render] header failed:', e); }
+  try { renderDaySelector(); } catch (e) { console.error('[Render] day selector failed:', e); }
+  try { renderMeals(); } catch (e) { console.error('[Render] meals failed:', e); }
+  try { updateTotals(); } catch (e) { console.error('[Render] totals failed:', e); }
+  try { renderCooking(); } catch (e) { console.error('[Render] cooking failed:', e); }
+  try { renderExtras(); } catch (e) { console.error('[Render] extras failed:', e); }
+  try { renderAnalytics(); } catch (e) { console.error('[Render] analytics failed:', e); }
+  try { renderShopList('weekly-container', diet.weeklyShop); } catch (e) { console.error('[Render] weekly shop failed:', e); }
+  try { renderShopList('monthly-container', diet.monthlyShop); } catch (e) { console.error('[Render] monthly shop failed:', e); }
+  try { renderRules(); } catch (e) { console.error('[Render] rules failed:', e); }
+  try { renderDietTab(); } catch (e) { console.error('[Render] diet tab failed:', e); }
+  try { renderStorageInfo(); } catch (e) { console.error('[Render] storage info failed:', e); }
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
