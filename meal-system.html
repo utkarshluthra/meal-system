@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Meal System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --bg: #f4efe6; --bg-card: #faf6ee; --bg-deep: #ebe3d2; --ink: #1f1a14; --ink-soft: #5a4f3f; --ink-faint: #8a7e6a; --accent: #b8451f; --accent-soft: #d97a4f; --accent-bg: rgba(184,69,31,0.08); --rule: #d8cdb8; --green: #4a6b3a; --green-bg: rgba(74,107,58,0.1); --amber: #c38a2f; --amber-bg: rgba(195,138,47,0.1); --red: #a8331f; --shadow: 0 1px 0 rgba(31,26,20,0.04), 0 8px 24px rgba(31,26,20,0.06); }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'DM Sans', -apple-system, sans-serif; background: var(--bg); background-image: radial-gradient(circle at 20% 10%, rgba(184,69,31,0.05), transparent 50%), radial-gradient(circle at 80% 90%, rgba(74,107,58,0.05), transparent 50%); color: var(--ink); line-height: 1.55; font-size: 16px; -webkit-font-smoothing: antialiased; padding-bottom: 80px; }
+  .container { max-width: 780px; margin: 0 auto; padding: 24px 18px; }
+
+  .auth-bar { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; }
+  .auth-status { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); }
+  .auth-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); }
+  .auth-status.online .dot { background: var(--green); }
+  .auth-status.local-only .dot { background: var(--amber); }
+  .auth-email { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink); font-weight: 600; }
+  .auth-btn { background: var(--ink); color: var(--bg); border: none; border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; }
+  .auth-btn:hover { background: var(--accent); }
+  .auth-btn.secondary { background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); }
+  .auth-btn.secondary:hover { color: var(--accent); border-color: var(--accent); }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(31,26,20,0.5); display: flex; align-items: center; justify-content: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+  .modal { background: var(--bg-card); border-radius: 16px; padding: 28px; max-width: 400px; width: calc(100% - 32px); box-shadow: 0 20px 60px rgba(0,0,0,0.2); transform: translateY(20px); transition: transform 0.2s; }
+  .modal-backdrop.show .modal { transform: translateY(0); }
+  .modal h2 { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 400; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .modal h2 em { font-style: italic; color: var(--accent); }
+  .modal p { font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; }
+  .modal-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--rule); border-radius: 10px; font-family: inherit; font-size: 14px; background: var(--bg); margin-bottom: 12px; }
+  .modal-input:focus { outline: none; border-color: var(--accent); }
+  .modal-btn { width: 100%; background: var(--accent); color: white; border: none; border-radius: 10px; padding: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+  .modal-btn:hover { background: var(--ink); }
+  .modal-btn.cancel { background: transparent; color: var(--ink-soft); border: 1px solid var(--rule); }
+  .modal-help { font-size: 11px; color: var(--ink-faint); text-align: center; margin-top: 10px; line-height: 1.5; }
+
+  header { text-align: center; padding: 12px 0 20px; border-bottom: 1px solid var(--rule); margin-bottom: 20px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: clamp(30px, 5.5vw, 44px); line-height: 1.05; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .subtitle { color: var(--ink-soft); font-size: 13px; max-width: 480px; margin: 0 auto; }
+  .diet-badge { display: inline-block; margin-top: 8px; padding: 4px 12px; background: var(--accent-bg); color: var(--accent); border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .day-selector { display: flex; gap: 6px; margin-bottom: 18px; overflow-x: auto; padding: 4px; -webkit-overflow-scrolling: touch; }
+  .day-pill { flex-shrink: 0; padding: 10px 14px; background: var(--bg-card); border: 1.5px solid var(--rule); border-radius: 12px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.2s ease; text-align: center; min-width: 64px; }
+  .day-pill .day-short { display: block; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
+  .day-pill .day-num { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; }
+  .day-pill.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .day-pill.active .day-short { color: var(--accent-soft); }
+  .day-pill.batch::after { content: "●"; display: block; color: var(--accent); font-size: 8px; margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--bg-deep); padding: 4px; border-radius: 12px; margin-bottom: 20px; overflow-x: auto; }
+  .tab { flex: 1; min-width: max-content; padding: 10px 14px; background: transparent; border: none; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em; white-space: nowrap; }
+  .tab.active { background: var(--ink); color: var(--bg); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+  .card { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 24px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .card-dark { background: var(--ink); color: var(--bg); border: none; }
+  .card h2 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .card h2 em { font-style: italic; color: var(--accent); }
+  .card-dark h2 em { color: var(--accent-soft); }
+  .card-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 16px; font-style: italic; }
+  .card-dark .card-sub { color: rgba(244,239,230,0.6); }
+
+  .totals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .total-box { background: rgba(244,239,230,0.06); padding: 12px 8px; border-radius: 10px; text-align: center; }
+  .total-value { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+  .total-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(244,239,230,0.6); }
+  .total-box.cal .total-value { color: var(--accent-soft); }
+  .total-box.protein .total-value { color: #e8a87c; }
+  .total-box.carbs .total-value { color: #f5d76e; }
+  .total-box.fat .total-value { color: #a8c98b; }
+
+  .meal { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 14px; margin-bottom: 12px; box-shadow: var(--shadow); overflow: hidden; position: relative; }
+  .meal::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+  .meal-head { padding: 18px 20px 12px; }
+  .meal-head-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .meal-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .meal-time { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); background: var(--accent-bg); padding: 4px 9px; border-radius: 20px; }
+  .meal-desc { color: var(--ink-soft); font-size: 12px; margin: 4px 0 0; font-style: italic; }
+  .options { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .option { background: var(--bg); border-radius: 10px; border: 2px solid transparent; transition: all 0.2s ease; cursor: pointer; }
+  .option.selected { border-color: var(--accent); background: var(--accent-bg); }
+  .option-header { display: flex; align-items: center; gap: 12px; padding: 11px 12px; }
+  .option-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--ink-faint); flex-shrink: 0; position: relative; transition: all 0.2s; }
+  .option.selected .option-radio { border-color: var(--accent); background: var(--accent); }
+  .option.selected .option-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: white; }
+  .option-main { flex: 1; }
+  .option-name { font-size: 14px; font-weight: 600; line-height: 1.3; margin-bottom: 2px; }
+  .option-macros { font-size: 10px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; }
+  .option-eaten { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; background: transparent; border: 1px solid var(--rule); cursor: pointer; transition: all 0.2s; }
+  .option-eaten:hover { border-color: var(--green); }
+  .option-eaten.checked { background: var(--green-bg); border-color: var(--green); }
+  .eaten-box { width: 14px; height: 14px; border: 1.5px solid var(--ink-faint); border-radius: 3px; position: relative; transition: all 0.2s; }
+  .option-eaten.checked .eaten-box { background: var(--green); border-color: var(--green); }
+  .option-eaten.checked .eaten-box::after { content: "✓"; position: absolute; inset: 0; color: white; font-size: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .eaten-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .option-eaten.checked .eaten-label { color: var(--green); }
+
+  .session-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 0 4px; }
+  .session-name { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 400; margin: 0; letter-spacing: -0.01em; }
+  .session-name em { font-style: italic; color: var(--accent); }
+  .session-budget { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); background: var(--accent-bg); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--accent); }
+  .cook-block { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 14px; margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  .cook-block.batch { border: 2px solid var(--accent); }
+  .cook-block.batch .cook-head { background: var(--ink); color: var(--bg); }
+  .cook-head { padding: 14px 18px; background: var(--bg-deep); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .cook-head-left { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .cook-title { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .cook-block.batch .cook-title em { color: var(--accent-soft); font-style: italic; }
+  .cook-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+  .cook-tag.meal { background: var(--accent-bg); color: var(--accent); }
+  .cook-tag.batch-task { background: rgba(244,239,230,0.15); color: var(--accent-soft); }
+  .cook-tag.assembly { background: var(--green-bg); color: var(--green); }
+  .cook-time { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--ink-faint); }
+  .cook-block.batch .cook-time { color: rgba(244,239,230,0.7); }
+  .cook-body { padding: 16px 18px; }
+  .cook-section { margin-bottom: 16px; }
+  .cook-section:last-child { margin-bottom: 0; }
+  .cook-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin-bottom: 8px; }
+  .ingredient-list, .steps-list { list-style: none; padding: 0; margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.65; }
+  .ingredient-list li { padding-left: 14px; position: relative; }
+  .ingredient-list li::before { content: "·"; position: absolute; left: 4px; color: var(--accent); font-weight: bold; }
+  .ingredient-list li strong, .steps-list li strong { color: var(--ink); font-weight: 600; }
+  .steps-list { counter-reset: step; }
+  .steps-list li { counter-increment: step; padding-left: 30px; position: relative; margin-bottom: 8px; }
+  .steps-list li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 22px; height: 22px; background: var(--accent); color: white; border-radius: 50%; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; }
+  .timeline { background: var(--bg-deep); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  .timeline-row { display: flex; gap: 12px; padding: 6px 0; align-items: baseline; border-bottom: 1px dashed var(--rule); font-size: 12px; }
+  .timeline-row:last-child { border-bottom: none; }
+  .time-stamp { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--accent); flex-shrink: 0; width: 70px; }
+  .time-task { color: var(--ink-soft); line-height: 1.4; }
+  .time-task strong { color: var(--ink); font-weight: 600; }
+  .empty-state { text-align: center; padding: 30px 20px; color: var(--ink-faint); font-style: italic; font-size: 13px; background: var(--bg-card); border: 1px dashed var(--rule); border-radius: 14px; margin-bottom: 12px; }
+  .empty-state .big { font-family: 'Fraunces', serif; font-size: 22px; color: var(--ink); display: block; margin-bottom: 6px; font-style: italic; }
+  .day-banner { background: var(--ink); color: var(--bg); padding: 16px 20px; border-radius: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .day-banner-name { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 400; margin: 0; }
+  .day-banner-name em { font-style: italic; color: var(--accent-soft); }
+  .day-banner-type { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(244,239,230,0.7); font-weight: 600; }
+  .total-time-pill { background: var(--accent); color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 12px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; }
+  .form-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .form-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--rule); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--bg); color: var(--ink); transition: border-color 0.2s; }
+  .form-input:focus { outline: none; border-color: var(--accent); }
+  .form-input.numeric { font-family: 'JetBrains Mono', monospace; text-align: center; }
+  .form-row-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn { background: var(--accent); color: white; border: none; border-radius: 10px; padding: 12px 20px; font-family: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; width: 100%; }
+  .btn:hover { background: var(--ink); }
+  .btn-secondary { background: transparent; color: var(--ink); border: 1.5px solid var(--rule); }
+  .btn-secondary:hover { background: var(--bg-deep); }
+  .btn-small { padding: 8px 12px; font-size: 11px; width: auto; }
+  .btn-danger-full { background: var(--red); color: white; border: none; }
+  .btn-danger-full:hover { background: var(--ink); }
+  .btn-danger { background: transparent; color: var(--red); border: none; padding: 4px 8px; font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 600; letter-spacing: 0.05em; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+
+  .extra-list { list-style: none; padding: 0; margin: 0; }
+  .extra-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg); border-radius: 10px; margin-bottom: 8px; border-left: 3px solid var(--amber); }
+  .extra-info { flex: 1; }
+  .extra-name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .extra-meta { font-size: 11px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .extra-when { font-size: 10px; color: var(--ink-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .extra-empty { text-align: center; padding: 30px 20px; color: var(--ink-faint); font-style: italic; font-size: 13px; }
+
+  .analytics-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .analytics-box { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 12px; text-align: center; }
+  .analytics-box-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; margin-bottom: 6px; }
+  .analytics-box-value { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; line-height: 1; color: var(--ink); }
+  .analytics-box-sub { font-size: 10px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+  .compare-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .compare-bar-tag { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; color: var(--ink-faint); width: 36px; flex-shrink: 0; }
+  .compare-bar { flex: 1; height: 10px; background: var(--bg-deep); border-radius: 5px; overflow: hidden; position: relative; }
+  .compare-fill { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
+  .compare-fill.plan { background: var(--ink-faint); }
+  .compare-fill.actual { background: var(--accent); }
+  .compare-fill.actual.over { background: var(--red); }
+  .compare-fill.actual.under { background: var(--amber); }
+  .compare-value { text-align: right; font-family: 'JetBrains Mono', monospace; color: var(--ink-soft); font-size: 11px; font-weight: 600; }
+  .compare-delta { font-size: 10px; margin-top: 2px; }
+  .compare-delta.over { color: var(--red); }
+  .compare-delta.under { color: var(--amber); }
+  .compare-delta.good { color: var(--green); }
+  .breakdown-section { background: var(--bg); border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .breakdown-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--rule); font-size: 12px; }
+  .breakdown-item:last-child { border-bottom: none; }
+  .breakdown-item-name { color: var(--ink-soft); }
+  .breakdown-item-name .icon { color: var(--accent); margin-right: 6px; }
+  .breakdown-item-value { font-family: 'JetBrains Mono', monospace; color: var(--ink-faint); }
+
+  .shop-section { background: var(--bg-card); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; margin-bottom: 12px; }
+  .shop-section h3 { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .shop-sub { font-size: 11px; color: var(--ink-faint); margin-bottom: 12px; font-style: italic; }
+  .shop-list { list-style: none; padding: 0; margin: 0; }
+  .shop-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--rule); font-size: 13px; cursor: pointer; transition: opacity 0.2s; }
+  .shop-list li:last-child { border-bottom: none; }
+  .shop-list li.checked { opacity: 0.4; text-decoration: line-through; }
+  .shop-check { width: 18px; height: 18px; border: 2px solid var(--ink-faint); border-radius: 4px; flex-shrink: 0; position: relative; transition: all 0.2s; }
+  .shop-list li.checked .shop-check { background: var(--accent); border-color: var(--accent); }
+  .shop-list li.checked .shop-check::after { content: "✓"; position: absolute; inset: 0; color: white; font-size: 12px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .shop-name { flex: 1; }
+  .shop-qty { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-faint); }
+  .shop-meta { font-size: 10px; color: var(--ink-faint); margin-left: 8px; font-style: italic; }
+
+  .info-box { background: var(--amber-bg); border-left: 3px solid var(--amber); border-radius: 4px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; line-height: 1.55; color: var(--ink-soft); }
+  .info-box strong { color: var(--ink); font-weight: 600; }
+  .info-title { display: block; color: var(--amber); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+  .info-box.green { background: var(--green-bg); border-left-color: var(--green); }
+  .info-box.green .info-title { color: var(--green); }
+  .info-box.blue { background: rgba(44,90,122,0.08); border-left-color: #2c5a7a; }
+  .info-box.blue .info-title { color: #2c5a7a; }
+
+  /* Diet tab */
+  .diet-info {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .diet-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 12px;
+  }
+  .diet-info-row:last-child { border-bottom: none; }
+  .diet-info-label { color: var(--ink-soft); }
+  .diet-info-value { color: var(--ink); font-weight: 600; }
+  .diet-info-value.mono { font-family: 'JetBrains Mono', monospace; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 24px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 1000; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+
+  footer { text-align: center; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--rule); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.08em; }
+
+  @media (max-width: 480px) {
+    .container { padding: 16px 12px; }
+    .meal-head { padding: 14px 14px 10px; }
+    .options { padding: 0 10px 10px; }
+    .meal-title { font-size: 18px; }
+    .cook-head, .cook-body { padding: 12px 14px; }
+    .cook-title { font-size: 16px; }
+    .day-pill { min-width: 56px; padding: 8px 10px; }
+    .session-name { font-size: 22px; }
+    .form-row { grid-template-columns: repeat(2, 1fr); }
+    .analytics-summary { grid-template-columns: 1fr; }
+    .btn-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-backdrop" id="auth-modal">
+    <div class="modal">
+      <h2>Sign in to <em>sync</em></h2>
+      <p>Enter your email. We'll send you a magic link — click it to sign in. Your diet and meal data sync across devices.</p>
+      <input type="email" class="modal-input" id="auth-email-input" placeholder="you@example.com" />
+      <button class="modal-btn" id="auth-send">Send Magic Link</button>
+      <button class="modal-btn cancel" id="auth-cancel">Cancel</button>
+      <p class="modal-help">First time? Just enter your email — we'll create an account. The default diet loads automatically; upload your own when ready.</p>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <div class="auth-bar" id="auth-bar">
+      <div class="auth-status local-only" id="auth-status">
+        <span class="dot"></span>
+        <span id="auth-status-text">Local only · No sync</span>
+      </div>
+      <div id="auth-actions">
+        <button class="auth-btn" id="btn-signin">Sign In to Sync</button>
+      </div>
+    </div>
+
+    <header>
+      <div class="eyebrow" id="header-eyebrow">Daily Meal System</div>
+      <h1>What are you eating <em>today?</em></h1>
+      <p class="subtitle">Plan it. Cook it. Track what you actually ate.</p>
+      <div class="diet-badge" id="diet-badge">Default Diet</div>
+    </header>
+
+    <div class="day-selector" id="day-selector"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="select">1. Select</button>
+      <button class="tab" data-tab="cook">2. Cook</button>
+      <button class="tab" data-tab="log">3. Log Extra</button>
+      <button class="tab" data-tab="analytics">4. Analytics</button>
+      <button class="tab" data-tab="diet">Diet</button>
+      <button class="tab" data-tab="data">Data</button>
+      <button class="tab" data-tab="weekly">Weekly</button>
+      <button class="tab" data-tab="monthly">Monthly</button>
+      <button class="tab" data-tab="rules">Rules</button>
+    </div>
+
+    <!-- SELECT -->
+    <div class="tab-content active" id="tab-select">
+      <div class="card card-dark">
+        <h2>Today's <em>plan</em></h2>
+        <p class="card-sub">Planned macros from your selections</p>
+        <div class="totals-grid">
+          <div class="total-box cal"><div class="total-value" id="t-cal">0</div><div class="total-label">kcal</div></div>
+          <div class="total-box protein"><div class="total-value" id="t-pro">0</div><div class="total-label">Protein g</div></div>
+          <div class="total-box carbs"><div class="total-value" id="t-car">0</div><div class="total-label">Carbs g</div></div>
+          <div class="total-box fat"><div class="total-value" id="t-fat">0</div><div class="total-label">Fat g</div></div>
+        </div>
+      </div>
+      <div id="meals-container"></div>
+    </div>
+
+    <div class="tab-content" id="tab-cook"><div id="cook-container"></div></div>
+
+    <div class="tab-content" id="tab-log">
+      <div class="card">
+        <h2>Log <em>extra meals</em></h2>
+        <p class="card-sub">Anything outside the plan.</p>
+        <div class="form-grid">
+          <div><label class="form-label">Food / Meal Name</label><input type="text" class="form-input" id="extra-name" placeholder="e.g. Protein shake" /></div>
+          <div class="form-row-meta">
+            <div><label class="form-label">When</label><select class="form-input" id="extra-when"><option value="morning">Morning</option><option value="midmorning">Mid-Morning</option><option value="lunch">Lunch</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option><option value="dinner">Dinner</option><option value="late">Late Night</option></select></div>
+            <div><label class="form-label">Portion</label><input type="text" class="form-input" id="extra-portion" placeholder="1 cup" /></div>
+          </div>
+          <div><label class="form-label">Macros</label><div class="form-row"><input type="number" class="form-input numeric" id="extra-cal" placeholder="kcal" /><input type="number" class="form-input numeric" id="extra-pro" placeholder="P g" /><input type="number" class="form-input numeric" id="extra-car" placeholder="C g" /><input type="number" class="form-input numeric" id="extra-fat" placeholder="F g" /></div></div>
+          <button class="btn" id="extra-add">+ Add to Today's Log</button>
+        </div>
+      </div>
+      <div class="card"><h2>Today's <em>extras</em></h2><p class="card-sub">Cleared at midnight</p><ul class="extra-list" id="extra-list"></ul></div>
+    </div>
+
+    <div class="tab-content" id="tab-analytics">
+      <div class="card card-dark">
+        <h2>Today's <em>analytics</em></h2>
+        <p class="card-sub">Plan vs Actual</p>
+        <div class="analytics-summary">
+          <div class="analytics-box" style="background:rgba(244,239,230,0.06);"><div class="analytics-box-label" style="color:rgba(244,239,230,0.6);">Planned</div><div class="analytics-box-value" id="sum-planned" style="color:var(--bg);">0</div><div class="analytics-box-sub" style="color:rgba(244,239,230,0.5);">kcal selected</div></div>
+          <div class="analytics-box" style="background:rgba(244,239,230,0.06);"><div class="analytics-box-label" style="color:rgba(244,239,230,0.6);">Actually Ate</div><div class="analytics-box-value" id="sum-actual" style="color:var(--accent-soft);">0</div><div class="analytics-box-sub" style="color:rgba(244,239,230,0.5);">kcal consumed</div></div>
+          <div class="analytics-box" style="background:rgba(244,239,230,0.06);"><div class="analytics-box-label" style="color:rgba(244,239,230,0.6);">Gap</div><div class="analytics-box-value" id="sum-gap" style="color:var(--bg);">0</div><div class="analytics-box-sub" id="sum-gap-label" style="color:rgba(244,239,230,0.5);">kcal off plan</div></div>
+        </div>
+      </div>
+      <div class="card"><h2>Plan <em>vs</em> Actual</h2><p class="card-sub">Top = plan · Bottom = ate</p><div id="compare-container"></div></div>
+      <div class="card"><h2>Today's <em>breakdown</em></h2><p class="card-sub">What contributed</p><div id="breakdown-container"></div></div>
+    </div>
+
+    <!-- DIET TAB -->
+    <div class="tab-content" id="tab-diet">
+      <div class="card card-dark">
+        <h2>Your <em>diet plan</em></h2>
+        <p class="card-sub">Upload a custom diet JSON. Each user gets their own — syncs across devices when signed in.</p>
+      </div>
+
+      <div class="info-box blue">
+        <span class="info-title" style="color:#2c5a7a;">How this works</span>
+        Your diet (meals, batch tasks, shopping lists, macro targets) is stored as a JSON file. Upload one to replace the default. Your trainer can send you a new file anytime — just upload it.
+      </div>
+
+      <div class="card">
+        <h2>Current <em>diet</em></h2>
+        <div class="diet-info" id="diet-info"></div>
+
+        <div class="btn-grid" style="margin-top:16px;">
+          <button class="btn" id="btn-diet-upload">⬆ Upload New Diet JSON</button>
+          <button class="btn btn-secondary" id="btn-diet-download">⬇ Download Current Diet</button>
+        </div>
+        <input type="file" id="file-diet-import" accept=".json" style="display:none;" />
+
+        <div style="margin-top:14px;">
+          <button class="btn btn-secondary" id="btn-diet-template">📋 Download Empty Template</button>
+        </div>
+
+        <div style="margin-top:18px; padding-top:18px; border-top: 1px dashed var(--rule);">
+          <button class="btn btn-danger-full" id="btn-diet-reset">Reset to Default Diet</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>JSON <em>structure</em></h2>
+        <p class="card-sub">What the diet file should contain</p>
+        <ul style="font-size:13px; line-height:1.8; color:var(--ink-soft); padding-left:18px; margin:0;">
+          <li><strong style="color:var(--ink);">name</strong> — Display name of the diet (e.g. "Veg High-Protein")</li>
+          <li><strong style="color:var(--ink);">goals</strong> — Daily macro targets {cal, pro, car, fat}</li>
+          <li><strong style="color:var(--ink);">meals</strong> — Array of meal slots with options, macros, ingredients, steps</li>
+          <li><strong style="color:var(--ink);">batchTasks</strong> — Per-day batch cooking tasks (sun/wed/sat etc)</li>
+          <li><strong style="color:var(--ink);">weeklyShop</strong> — Perishables shopping list, categorized</li>
+          <li><strong style="color:var(--ink);">monthlyShop</strong> — Pantry shopping list, categorized</li>
+        </ul>
+        <p style="font-size:11px; color:var(--ink-faint); margin-top:12px; font-style:italic;">Download the current diet to see a working example of the exact structure expected.</p>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-data">
+      <div class="card card-dark"><h2>Data <em>management</em></h2><p class="card-sub">Export, import, share with trainer</p></div>
+      <div class="card"><h2>Trainer <em>report</em></h2><p class="card-sub">PDF of today's plan vs actual.</p><button class="btn" id="btn-pdf">📄 Generate Today's PDF Report</button></div>
+      <div class="card"><h2>Tracking <em>backup</em></h2><p class="card-sub">Selections, ate ticks, and extras (not the diet plan itself).</p><div class="btn-grid"><button class="btn btn-secondary" id="btn-export">⬇ Export JSON</button><button class="btn btn-secondary" id="btn-import">⬆ Import JSON</button></div><input type="file" id="file-import" accept=".json" style="display:none;" /></div>
+      <div class="card"><h2>Storage <em>info</em></h2><p class="card-sub">What's saved and where</p><div id="storage-info" style="font-size:13px; color:var(--ink-soft); line-height:1.7;"></div><button class="btn btn-secondary btn-small" id="btn-clear" style="margin-top:14px;">Clear Tracking Data</button></div>
+    </div>
+
+    <div class="tab-content" id="tab-weekly">
+      <div class="card card-dark"><h2>Weekly <em>shopping list</em></h2><p class="card-sub" id="weekly-sub">From your diet plan</p></div>
+      <div id="weekly-container"></div>
+    </div>
+
+    <div class="tab-content" id="tab-monthly">
+      <div class="card card-dark"><h2>Monthly <em>shopping list</em></h2><p class="card-sub" id="monthly-sub">From your diet plan</p></div>
+      <div id="monthly-container"></div>
+    </div>
+
+    <div class="tab-content" id="tab-rules">
+      <div class="card card-dark"><h2>Ground rules</h2><ul style="margin:0; padding-left:18px; font-size:13px; line-height:1.7; color:rgba(244,239,230,0.85);" id="rules-list"></ul></div>
+      <div class="card"><h2>If you fall <em>behind</em></h2><ul style="font-size:13px; line-height:1.7; color:var(--ink-soft); padding-left:18px; margin:0;"><li><strong style="color:var(--ink);">Missed Sunday batch:</strong> Order tiffin Mon–Tue. Partial batch Monday eve.</li><li><strong style="color:var(--ink);">Missed Wed refresh:</strong> Dry snacks + Sunday stock.</li><li><strong style="color:var(--ink);">No time:</strong> Assembly-only options.</li></ul></div>
+    </div>
+
+    <footer>Consistency &gt; Perfection</footer>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+// =================================================================
+// SUPABASE CONFIG — paste your keys here
+// =================================================================
+const SUPABASE_URL = 'https://ksucjrvjlwspniogynkf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzdWNqcnZqbHdzcG5pb2d5bmtmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NjEwNjIsImV4cCI6MjA5NDQzNzA2Mn0.CAd3_8bMFHrmfNFEfgfgoVuNMujKG_WV3jqwRdqjwv4';
+const SYNC_ENABLED = !SUPABASE_URL.includes('YOUR_SUPABASE') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE');
+let supabase = null;
+let currentUser = null;
+if (SYNC_ENABLED) supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// =================================================================
+// DEFAULT DIET (ships with the app — starter template)
+// =================================================================
+const DEFAULT_DIET = {
+  name: "Vegetarian Default",
+  goals: { cal: 2000, pro: 110, car: 250, fat: 65 },
+  rules: [
+    "Drink at least 3 litres of water across the day — sip, don't gulp.",
+    "Sit down to eat. No screens, no calls.",
+    "Chew slowly — 20–25 chews per bite.",
+    "Keep a 2-hour gap between dinner and sleep.",
+    "No eggs on Tuesdays.",
+    "Soak nuts and seeds overnight."
+  ],
+  days: [
+    { id: 'mon', short: 'Mon', label: 'Monday', type: 'Assembly Day', batch: false },
+    { id: 'tue', short: 'Tue', label: 'Tuesday', type: 'Assembly Day', batch: false },
+    { id: 'wed', short: 'Wed', label: 'Wednesday', type: 'Mid-Week Refresh', batch: true },
+    { id: 'thu', short: 'Thu', label: 'Thursday', type: 'Assembly Day', batch: false },
+    { id: 'fri', short: 'Fri', label: 'Friday', type: 'Assembly Day', batch: false },
+    { id: 'sat', short: 'Sat', label: 'Saturday', type: 'Shop & Reset', batch: true },
+    { id: 'sun', short: 'Sun', label: 'Sunday', type: 'BIG BATCH DAY', batch: true }
+  ],
+  meals: [
+    { id: 'wake', title: 'On Waking', time: 'Empty Stomach', desc: 'Hydration + healthy fats.', forced: true,
+      options: [{ id: 'wake-1', name: 'Lemon chia water + 3 soaked walnuts', slot: 'morning', macros: { cal: 115, pro: 3, car: 5, fat: 10 }, time: { active: 2, total: 2 },
+        ingredients: [ { name: 'Warm water', qty: '250 ml' }, { name: 'Lemon juice', qty: '½ lemon' }, { name: 'Chia seeds (pre-soaked)', qty: '1 tsp' }, { name: 'Walnut halves (pre-soaked)', qty: '3' } ],
+        morningSteps: [ 'Walnuts and chia are already soaking from last night.', 'Pour 250 ml warm water; add chia + lemon juice.', 'Drink slowly. Eat soaked walnuts after.' ], eveningSteps: [] }] },
+    { id: 'breakfast', title: 'Breakfast', time: '9:00 – 9:30 AM', desc: '',
+      options: [
+        { id: 'bf-1', name: '2 Moong dal chillas with paneer', slot: 'morning', macros: { cal: 410, pro: 28, car: 38, fat: 16 }, time: { active: 12, total: 12 },
+          ingredients: [ { name: 'Chilla batter (Sunday batch)', qty: '1 cup' }, { name: 'Paneer crumbled', qty: '50 g' }, { name: 'Onion chopped', qty: '2 tbsp' }, { name: 'Ghee', qty: '1 tsp' } ],
+          morningSteps: [ 'Pull batter, paneer, onion from fridge.', 'Heat non-stick tawa, grease lightly.', 'Pour ½ ladle batter, spread thin.', 'Sprinkle paneer + onion.', 'Cook 90 sec, flip, cook 60 sec. Repeat.', 'Plate with curd or chutney.' ], eveningSteps: [] },
+        { id: 'bf-2', name: 'Oats + chia + whey protein', slot: 'morning', macros: { cal: 380, pro: 32, car: 42, fat: 9 }, time: { active: 6, total: 6 },
+          ingredients: [ { name: 'Rolled oats', qty: '½ cup' }, { name: 'Skimmed milk', qty: '1 cup' }, { name: 'Chia seeds', qty: '1 tbsp' }, { name: 'Whey protein', qty: '1 scoop' } ],
+          morningSteps: [ 'Bring milk to gentle simmer.', 'Add oats. Cook 4 min on low.', 'Take off heat. Wait 60 sec.', 'Stir in chia + whey. Eat hot.' ], eveningSteps: [] },
+        { id: 'bf-3', name: 'Vegetable poha with peanuts', slot: 'morning', macros: { cal: 365, pro: 14, car: 52, fat: 12 }, time: { active: 10, total: 10 },
+          ingredients: [ { name: 'Poha thick', qty: '1 cup' }, { name: 'Boiled peanuts', qty: '½ cup' }, { name: 'Pre-chopped veg', qty: '½ cup' }, { name: 'Oil', qty: '2 tsp' } ],
+          morningSteps: [ 'Rinse poha, drain fully.', 'Heat oil. Mustard seeds, curry leaves.', 'Add pre-chopped veg. 3 min on high.', 'Add turmeric, salt, poha, peanuts. Toss 90 sec.', 'Lemon. Plate.' ], eveningSteps: [] }
+      ] },
+    { id: 'midmorning', title: 'Mid-Morning Snack', time: '12:00 PM', desc: 'Pure assembly.',
+      options: [
+        { id: 'mm-1', name: 'Black coffee + papaya bowl', slot: 'morning', macros: { cal: 85, pro: 2, car: 20, fat: 0 }, time: { active: 3, total: 3 },
+          ingredients: [ { name: 'Coffee (moka pot)', qty: '1 cup' }, { name: 'Cubed papaya', qty: '200 g' } ],
+          morningSteps: [ 'Brew moka pot coffee.', 'Take cubed fruit from fridge.', 'Eat fruit first, sip coffee after.' ], eveningSteps: [] },
+        { id: 'mm-2', name: 'Coconut water + 5 soaked almonds', slot: 'morning', macros: { cal: 105, pro: 3, car: 11, fat: 6 }, time: { active: 1, total: 1 },
+          ingredients: [ { name: 'Coconut water', qty: '250 ml' }, { name: 'Soaked almonds', qty: '5' } ],
+          morningSteps: [ 'Pour coconut water.', 'Grab 5 pre-peeled almonds.', 'Drink, eat almonds slowly.' ], eveningSteps: [] }
+      ] },
+    { id: 'lunch', title: 'Lunch', time: '3:00 – 5:00 PM', desc: 'Reheat-and-assemble.',
+      options: [
+        { id: 'l-1', name: '2 rotis + chana curry + salad', slot: 'lunch', macros: { cal: 575, pro: 22, car: 78, fat: 16 }, time: { active: 5, total: 5 },
+          ingredients: [ { name: 'Frozen rotis', qty: '2' }, { name: 'Chana curry', qty: '1 bowl' }, { name: 'Salad', qty: '1 bowl' } ],
+          morningSteps: [], eveningSteps: [], lunchSteps: [ 'Reheat rotis 20 sec each side on tawa.', 'Microwave chana 90 sec.', 'Plate salad with lemon + salt.' ] },
+        { id: 'l-2', name: 'Rice + dal + sautéed veg', slot: 'lunch', macros: { cal: 540, pro: 18, car: 92, fat: 9 }, time: { active: 4, total: 4 },
+          ingredients: [ { name: 'Cooked rice', qty: '120 g' }, { name: 'Arhar dal', qty: '1 bowl' }, { name: 'Sabzi', qty: '1 bowl' } ],
+          morningSteps: [], eveningSteps: [], lunchSteps: [ 'Microwave rice with 1 tbsp water — 90 sec.', 'Microwave dal — 90 sec.', 'Microwave sabzi — 60 sec.' ] },
+        { id: 'l-3', name: 'Quinoa khichdi + curd + sabzi', slot: 'lunch', macros: { cal: 510, pro: 20, car: 75, fat: 13 }, time: { active: 4, total: 4 },
+          ingredients: [ { name: 'Quinoa khichdi', qty: '1 bowl' }, { name: 'Curd', qty: '½ cup' }, { name: 'Mixed sabzi', qty: '1 bowl' } ],
+          morningSteps: [], eveningSteps: [], lunchSteps: [ 'Reheat khichdi 90 sec.', 'Spoon curd, plate sabzi.' ] }
+      ] },
+    { id: 'snack', title: 'Evening Snack', time: '7:00 PM', desc: '',
+      options: [
+        { id: 's-1', name: 'Roasted makhana + green tea', slot: 'evening', macros: { cal: 145, pro: 5, car: 24, fat: 3 }, time: { active: 3, total: 3 },
+          ingredients: [ { name: 'Pre-roasted makhana', qty: '1 cup' }, { name: 'Green tea bag', qty: '1' } ],
+          morningSteps: [], eveningSteps: [ 'Scoop makhana from jar.', 'Steep green tea 2 min in 80°C water.' ] },
+        { id: 's-2', name: '100g roasted chana', slot: 'evening', macros: { cal: 380, pro: 22, car: 58, fat: 6 }, time: { active: 1, total: 1 },
+          ingredients: [ { name: 'Roasted chana', qty: '100 g' }, { name: 'Chaat masala', qty: 'pinch' } ],
+          morningSteps: [], eveningSteps: [ 'Scoop into bowl.', 'Sprinkle chaat masala.' ] },
+        { id: 's-3', name: 'Plain lassi', slot: 'evening', macros: { cal: 130, pro: 7, car: 14, fat: 5 }, time: { active: 2, total: 2 },
+          ingredients: [ { name: 'Curd', qty: '1 cup' }, { name: 'Water', qty: '½ cup' } ],
+          morningSteps: [], eveningSteps: [ 'Whisk curd smooth.', 'Add water.', 'Pink salt + jeera. Pour over ice.' ] }
+      ] },
+    { id: 'dinner', title: 'Dinner', time: '9:00 – 11:00 PM', desc: '',
+      options: [
+        { id: 'd-1', name: 'Grilled paneer with broccoli & peppers', slot: 'evening', macros: { cal: 420, pro: 30, car: 14, fat: 27 }, time: { active: 18, total: 18 },
+          ingredients: [ { name: 'Marinated paneer', qty: '150 g' }, { name: 'Blanched broccoli', qty: '1 cup' }, { name: 'Sliced peppers', qty: '1 cup' } ],
+          morningSteps: [], eveningSteps: [ 'Heat grill pan high.', 'Grill paneer 90 sec each side.', 'Sauté garlic 30 sec.', 'Peppers stir-fry 2 min.', 'Add broccoli + paneer. Toss 1 min.', 'Lemon, pepper. Plate.' ] },
+        { id: 'd-2', name: 'Moong dal khichdi soupy', slot: 'evening', macros: { cal: 390, pro: 16, car: 64, fat: 8 }, time: { active: 8, total: 8 },
+          ingredients: [ { name: 'Khichdi (Sunday batch)', qty: '1 bowl' }, { name: 'Ghee', qty: '1 tsp' } ],
+          morningSteps: [], eveningSteps: [ 'Heat ghee, crackle jeera + hing.', 'Add khichdi + ¼ cup hot water.', 'Stir on low 4 min.', 'Pepper, lemon.' ] },
+        { id: 'd-3', name: 'Sprout salad', slot: 'evening', macros: { cal: 280, pro: 18, car: 38, fat: 5 }, time: { active: 5, total: 5 },
+          ingredients: [ { name: 'Sprouted moong', qty: '1 cup' }, { name: 'Chopped veg', qty: '1 cup' }, { name: 'Pomegranate', qty: '2 tbsp' } ],
+          morningSteps: [], eveningSteps: [ 'Combine sprouts, veg, pomegranate.', 'Lemon, salt, chaat masala.', 'Top with coriander. Toss.' ] }
+      ] },
+    { id: 'bed', title: 'Before Bed', time: 'Wind Down', desc: '', forced: true,
+      options: [{ id: 'bed-1', name: 'Ajwain saunf tea', slot: 'evening', macros: { cal: 8, pro: 0, car: 2, fat: 0 }, time: { active: 5, total: 5 },
+        ingredients: [ { name: 'Water', qty: '1 cup' }, { name: 'Ajwain + saunf', qty: '½ tsp each' } ],
+        morningSteps: [], eveningSteps: [ 'Boil water.', 'Add ajwain + saunf. Simmer 4 min.', 'Strain. Sip 30 min before sleep.' ] }] }
+  ],
+  batchTasks: {
+    sun: { morning: [{ title: 'Pantry & Soaking', timeRange: '15 min', ingredients: [ { name: 'Yellow moong dal', qty: '½ cup' }, { name: 'Whole moong', qty: '1 cup' }, { name: 'Almonds + walnuts', qty: '½ cup + ¼ cup' } ], steps: [ 'Soak ½ cup moong dal.', 'Soak 1 cup whole moong for sprouts.', 'Refill almond + walnut jars.', 'Wash dals, rice, quinoa.', 'Chop onions, tomatoes, capsicum, beans, carrots.' ] }],
+      evening: [{ title: 'BIG BATCH COOK', timeRange: '90 min', ingredients: [ { name: 'Arhar dal', qty: '1 cup' }, { name: 'Rice', qty: '1.5 cups' }, { name: 'Quinoa mix', qty: '½ cup' }, { name: 'Chickpeas boiled', qty: '2 cups' }, { name: 'Atta', qty: '300 g' } ], steps: [], timeline: [ { time: '0–5 min', task: 'Pressure cook <strong>arhar dal</strong> → 3 whistles.' }, { time: '5–15 min', task: 'Cook <strong>rice</strong>. Portion into 3 containers.' }, { time: '15–35 min', task: '<strong>Quinoa khichdi</strong> → 2 whistles.' }, { time: '15–35 min', task: '<strong>Parallel:</strong> Chana curry. 25 min.' }, { time: '35–50 min', task: 'Cook <strong>10 multigrain rotis</strong>. Freeze.' }, { time: '50–60 min', task: '<strong>Sabzi 1:</strong> Beans + carrots.' }, { time: '60–70 min', task: '<strong>Sabzi 2:</strong> Mixed veg.' }, { time: '70–80 min', task: 'Blend <strong>chilla batter</strong>.' }, { time: '80–88 min', task: 'Roast <strong>makhana</strong> for the week.' }, { time: '88–90 min', task: 'Tie <strong>sprouts</strong> in damp cloth.' } ] }] },
+    wed: { morning: [], evening: [{ title: 'Mid-Week Refresh', timeRange: '20 min', ingredients: [ { name: 'Fresh veg', qty: 'week-2 stock' }, { name: 'Paneer', qty: '150 g' }, { name: 'Broccoli', qty: '1 head' } ], steps: [ 'Chop fresh week-2 veg.', 'Marinate paneer.', 'Blanch broccoli → ice bath.', 'Cube papaya.', 'Fridge audit.' ] }] },
+    sat: { morning: [{ title: 'Weekly Shop Run', timeRange: '45 min', ingredients: [], steps: [ 'Open Weekly Shop tab.', 'Check fridge.', 'Buy from sabzi-mandi or BigBasket.', 'Wash, dry, store.', 'Ready for Sunday batch.' ] }], evening: [] },
+    mon: { morning: [], evening: [] }, tue: { morning: [], evening: [] }, thu: { morning: [], evening: [] }, fri: { morning: [], evening: [] }
+  },
+  weeklyShop: {
+    'Vegetables': [ { name: 'Onions', qty: '500 g' }, { name: 'Tomatoes', qty: '400 g' }, { name: 'Cucumber', qty: '4' }, { name: 'Carrots', qty: '300 g' }, { name: 'French beans', qty: '200 g' }, { name: 'Capsicum', qty: '2' }, { name: 'Bell peppers', qty: '1 each' }, { name: 'Broccoli', qty: '1 head' }, { name: 'Peas (frozen)', qty: '200 g' }, { name: 'Coriander', qty: '1 bunch' }, { name: 'Mint', qty: '1 small' }, { name: 'Ginger + chilli + garlic', qty: 'pack' } ],
+    'Fruits': [ { name: 'Lemon', qty: '8' }, { name: 'Papaya/watermelon', qty: '1' }, { name: 'Pomegranate', qty: '1' }, { name: 'Banana', qty: '6' } ],
+    'Dairy & Fresh Protein': [ { name: 'Paneer fresh', qty: '300 g' }, { name: 'Curd', qty: '500 g' }, { name: 'Skimmed milk', qty: '1 L' }, { name: 'Coconut water', qty: '4' } ],
+    'Other': [ { name: 'Curry leaves', qty: '1 sprig' } ]
+  },
+  monthlyShop: {
+    'Grains & Flours': [ { name: 'Multigrain atta', qty: '2 kg' }, { name: 'Rolled oats', qty: '1 kg' }, { name: 'Poha', qty: '500 g' }, { name: 'Basmati rice', qty: '2 kg' }, { name: 'Quinoa', qty: '1 kg' }, { name: 'Foxtail millet', qty: '500 g' } ],
+    'Dals & Pulses': [ { name: 'Yellow moong dal', qty: '1 kg' }, { name: 'Arhar dal', qty: '1 kg' }, { name: 'White chana', qty: '1 kg' }, { name: 'Whole moong', qty: '500 g' }, { name: 'Roasted chana', qty: '1 kg' }, { name: 'Masoor dal', qty: '500 g' } ],
+    'Nuts & Seeds': [ { name: 'Walnuts', qty: '500 g' }, { name: 'Almonds', qty: '500 g' }, { name: 'Peanuts', qty: '500 g' }, { name: 'Chia seeds', qty: '250 g' }, { name: 'Makhana', qty: '500 g' } ],
+    'Oils & Long-Life': [ { name: 'Ghee', qty: '500 g' }, { name: 'Mustard/groundnut oil', qty: '1 L' }, { name: 'Olive oil', qty: '500 ml' }, { name: 'Whey protein', qty: '1 kg tub' } ],
+    'Spices': [ { name: 'Jeera', qty: '200 g' }, { name: 'Mustard seeds', qty: '100 g' }, { name: 'Ajwain', qty: '100 g' }, { name: 'Saunf', qty: '100 g' }, { name: 'Turmeric', qty: '200 g' }, { name: 'Coriander powder', qty: '200 g' }, { name: 'Garam masala', qty: '100 g' }, { name: 'Hing', qty: '1 jar' }, { name: 'Pink salt', qty: '500 g' } ],
+    'Drinks': [ { name: 'Coffee beans', qty: '500 g' }, { name: 'Green tea bags', qty: '1 box' } ]
+  }
+};
+
+// =================================================================
+// STATE
+// =================================================================
+const STORAGE_KEY = 'meal_system_v2_tracking';
+const DIET_KEY = 'meal_system_v2_diet';
+let currentDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+let selected = {}, ateState = {}, extras = [], shopChecks = {};
+let diet = null; // dynamically loaded
+let todayDateKey = new Date().toDateString();
+let syncTimer = null;
+
+// =================================================================
+// DIET VALIDATION
+// =================================================================
+function validateDiet(d) {
+  if (!d || typeof d !== 'object') return 'Not a valid object';
+  if (!d.name || typeof d.name !== 'string') return 'Missing "name" field';
+  if (!d.goals || typeof d.goals !== 'object') return 'Missing "goals" object';
+  if (!Array.isArray(d.meals) || d.meals.length === 0) return 'Missing or empty "meals" array';
+  for (const meal of d.meals) {
+    if (!meal.id || !meal.title || !Array.isArray(meal.options)) return `Invalid meal: ${meal.id || 'unknown'}`;
+    for (const opt of meal.options) {
+      if (!opt.id || !opt.name || !opt.macros) return `Invalid option in ${meal.id}`;
+    }
+  }
+  // Fill in optional fields with defaults if missing
+  if (!d.days) d.days = DEFAULT_DIET.days;
+  if (!d.batchTasks) d.batchTasks = {};
+  if (!d.weeklyShop) d.weeklyShop = {};
+  if (!d.monthlyShop) d.monthlyShop = {};
+  if (!d.rules) d.rules = [];
+  return null; // valid
+}
+
+function loadDiet() {
+  // Try localStorage first
+  try {
+    const raw = localStorage.getItem(DIET_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const err = validateDiet(parsed);
+      if (!err) return parsed;
+    }
+  } catch (e) { console.warn('Diet load failed, using default:', e); }
+  return JSON.parse(JSON.stringify(DEFAULT_DIET)); // deep clone
+}
+
+function saveDietLocal() {
+  try { localStorage.setItem(DIET_KEY, JSON.stringify(diet)); } catch (e) { console.warn('Diet save failed:', e); }
+}
+
+async function pushDietToCloud() {
+  if (!supabase || !currentUser) return;
+  try {
+    const { error } = await supabase.from('user_diets').upsert({ user_id: currentUser.id, diet, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (error) throw error;
+  } catch (e) { console.warn('Diet cloud push failed:', e); }
+}
+
+async function pullDietFromCloud() {
+  if (!supabase || !currentUser) return null;
+  try {
+    const { data, error } = await supabase.from('user_diets').select('diet').eq('user_id', currentUser.id).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? data.diet : null;
+  } catch (e) { console.warn('Diet cloud pull failed:', e); return null; }
+}
+
+// =================================================================
+// TRACKING STORAGE (separate from diet)
+// =================================================================
+function loadTracking() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+
+function saveTrackingLocal() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastSaved: new Date().toISOString(), dateKey: todayDateKey, selected, ateState, extras, shopChecks })); } catch (e) {}
+}
+
+function scheduleSync() {
+  if (!supabase || !currentUser) return;
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushTrackingToCloud, 2000);
+  updateAuthStatus('syncing');
+}
+
+async function pushTrackingToCloud() {
+  if (!supabase || !currentUser) return;
+  try {
+    const { error } = await supabase.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: todayDateKey }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    if (error) throw error;
+    updateAuthStatus('online');
+  } catch (e) { updateAuthStatus('offline'); }
+}
+
+async function pullTrackingFromCloud() {
+  if (!supabase || !currentUser) return null;
+  try {
+    const { data, error } = await supabase.from('meal_data').select('data, updated_at').eq('user_id', currentUser.id).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data ? { ...data.data, updated_at: data.updated_at } : null;
+  } catch (e) { return null; }
+}
+
+function save() { saveTrackingLocal(); scheduleSync(); }
+
+// =================================================================
+// AUTH
+// =================================================================
+async function initAuth() {
+  if (!supabase) { updateAuthStatus('disabled'); return; }
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); }
+  else updateAuthStatus('signed-out');
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) { currentUser = session.user; await onSignedIn(); updateAuthStatus('online'); showToast('Signed in · syncing', 'success'); }
+    else if (event === 'SIGNED_OUT') { currentUser = null; updateAuthStatus('signed-out'); }
+  });
+}
+
+async function onSignedIn() {
+  // Pull diet from cloud
+  const cloudDiet = await pullDietFromCloud();
+  if (cloudDiet) {
+    const err = validateDiet(cloudDiet);
+    if (!err) {
+      diet = cloudDiet;
+      saveDietLocal();
+    }
+  } else {
+    // First sign-in, push current (default) diet up
+    pushDietToCloud();
+  }
+  // Pull tracking
+  const cloudTracking = await pullTrackingFromCloud();
+  const localTracking = loadTracking();
+  if (cloudTracking && (!localTracking || new Date(cloudTracking.updated_at) > new Date(localTracking.lastSaved || 0))) {
+    selected = cloudTracking.selected || {};
+    ateState = cloudTracking.dateKey === todayDateKey ? (cloudTracking.ateState || {}) : {};
+    extras = cloudTracking.dateKey === todayDateKey ? (cloudTracking.extras || []) : [];
+    shopChecks = cloudTracking.shopChecks || {};
+    saveTrackingLocal();
+  } else if (localTracking) {
+    pushTrackingToCloud();
+  }
+  fillSelectionsFromDiet();
+  renderAll();
+}
+
+async function sendMagicLink() {
+  const email = document.getElementById('auth-email-input').value.trim();
+  if (!email) { showToast('Enter email', 'error'); return; }
+  if (!supabase) { showToast('Sync not configured', 'error'); return; }
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+    if (error) throw error;
+    showToast('Check email for link', 'success');
+    document.getElementById('auth-modal').classList.remove('show');
+  } catch (e) { showToast('Failed: ' + e.message, 'error'); }
+}
+
+async function signOut() {
+  if (!supabase) return;
+  await supabase.auth.signOut();
+  currentUser = null;
+  updateAuthStatus('signed-out');
+  showToast('Signed out', 'success');
+}
+
+function updateAuthStatus(state) {
+  const bar = document.getElementById('auth-status');
+  const text = document.getElementById('auth-status-text');
+  const actions = document.getElementById('auth-actions');
+  bar.classList.remove('online', 'local-only');
+  if (state === 'disabled') {
+    bar.classList.add('local-only');
+    text.textContent = 'Local only · Sync not configured';
+    actions.innerHTML = '<span style="font-size:10px; color:var(--ink-faint); font-style:italic;">Add Supabase keys</span>';
+  } else if (state === 'signed-out') {
+    bar.classList.add('local-only');
+    text.textContent = 'Local only · No sync';
+    actions.innerHTML = '<button class="auth-btn" id="btn-signin">Sign In to Sync</button>';
+  } else if (state === 'online') {
+    bar.classList.add('online');
+    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Synced`;
+    actions.innerHTML = '<button class="auth-btn secondary" id="btn-signout">Sign Out</button>';
+  } else if (state === 'syncing') {
+    bar.classList.add('online');
+    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Syncing...`;
+  } else if (state === 'offline') {
+    bar.classList.add('local-only');
+    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Offline · local`;
+  }
+}
+
+// =================================================================
+// INIT
+// =================================================================
+diet = loadDiet();
+function fillSelectionsFromDiet() {
+  diet.meals.forEach(m => { if (!selected[m.id] || !m.options.find(o => o.id === selected[m.id])) selected[m.id] = m.options[0].id; });
+}
+
+const storedTracking = loadTracking();
+if (storedTracking && storedTracking.dateKey === todayDateKey) {
+  selected = storedTracking.selected || {}; ateState = storedTracking.ateState || {}; extras = storedTracking.extras || []; shopChecks = storedTracking.shopChecks || {};
+} else if (storedTracking) {
+  selected = storedTracking.selected || {}; ateState = {}; extras = []; shopChecks = storedTracking.shopChecks || {};
+}
+fillSelectionsFromDiet();
+
+function checkDayRollover() {
+  const newKey = new Date().toDateString();
+  if (newKey !== todayDateKey) { ateState = {}; extras = []; todayDateKey = newKey; currentDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()]; save(); renderAll(); }
+}
+setInterval(checkDayRollover, 60000);
+
+// =================================================================
+// RENDERERS
+// =================================================================
+function renderHeader() {
+  document.getElementById('diet-badge').textContent = diet.name;
+}
+
+function renderDaySelector() {
+  const container = document.getElementById('day-selector');
+  const ordered = ['mon','tue','wed','thu','fri','sat','sun'].map(id => diet.days.find(d => d.id === id) || { id, short: id.slice(0,3), label: id, batch: false });
+  container.innerHTML = ordered.map(d => `<button class="day-pill ${d.id === currentDay ? 'active' : ''} ${d.batch ? 'batch' : ''}" data-day="${d.id}"><span class="day-short">${d.short}</span><span class="day-num">${(d.label || d.id).slice(0,3)}</span></button>`).join('');
+  container.querySelectorAll('.day-pill').forEach(btn => btn.addEventListener('click', () => { currentDay = btn.dataset.day; renderDaySelector(); renderCooking(); }));
+}
+
+function renderMeals() {
+  const container = document.getElementById('meals-container');
+  container.innerHTML = diet.meals.map(meal => {
+    const isForced = meal.forced;
+    const optsHTML = meal.options.map(opt => {
+      const isSelected = selected[meal.id] === opt.id;
+      const ateKey = meal.id + '-' + opt.id;
+      const isAte = ateState[ateKey];
+      return `<div class="option ${isSelected ? 'selected' : ''}" data-meal="${meal.id}" data-opt="${opt.id}"><div class="option-header">${!isForced ? '<div class="option-radio" data-action="select"></div>' : '<div style="width:16px;"></div>'}<div class="option-main" data-action="select"><div class="option-name">${opt.name}</div><div class="option-macros">${opt.macros.cal} kcal · ${opt.macros.pro}P / ${opt.macros.car}C / ${opt.macros.fat}F</div></div><button class="option-eaten ${isAte ? 'checked' : ''}" data-action="ate"><div class="eaten-box"></div><span class="eaten-label">Ate</span></button></div></div>`;
+    }).join('');
+    return `<section class="meal"><div class="meal-head"><div class="meal-head-top"><h2 class="meal-title">${meal.title}</h2><span class="meal-time">${meal.time}</span></div>${meal.desc ? `<p class="meal-desc">${meal.desc}</p>` : ''}</div><div class="options">${optsHTML}</div></section>`;
+  }).join('');
+  container.querySelectorAll('.option').forEach(el => {
+    const mealId = el.dataset.meal; const optId = el.dataset.opt;
+    el.querySelectorAll('[data-action="select"]').forEach(t => t.addEventListener('click', e => { e.stopPropagation(); const meal = diet.meals.find(m => m.id === mealId); if (meal.forced) return; selected[mealId] = optId; save(); renderMeals(); updateTotals(); renderCooking(); renderAnalytics(); }));
+    const ateBtn = el.querySelector('[data-action="ate"]');
+    if (ateBtn) ateBtn.addEventListener('click', e => { e.stopPropagation(); const key = mealId + '-' + optId; if (ateState[key]) delete ateState[key]; else ateState[key] = true; save(); renderMeals(); renderAnalytics(); });
+  });
+}
+
+function updateTotals() {
+  let totals = { cal: 0, pro: 0, car: 0, fat: 0 };
+  diet.meals.forEach(meal => { const opt = meal.options.find(o => o.id === selected[meal.id]); if (opt) ['cal','pro','car','fat'].forEach(k => totals[k] += opt.macros[k]); });
+  document.getElementById('t-cal').textContent = totals.cal;
+  document.getElementById('t-pro').textContent = totals.pro;
+  document.getElementById('t-car').textContent = totals.car;
+  document.getElementById('t-fat').textContent = totals.fat;
+}
+
+function renderCooking() {
+  const container = document.getElementById('cook-container');
+  const dayObj = diet.days.find(d => d.id === currentDay) || { id: currentDay, label: currentDay, type: '', batch: false };
+  const dayBatchTasks = (diet.batchTasks && diet.batchTasks[currentDay]) || { morning: [], evening: [] };
+  const selectedMeals = diet.meals.map(m => ({ meal: m, opt: m.options.find(o => o.id === selected[m.id]) }));
+  const morningMeals = selectedMeals.filter(({meal, opt}) => opt && opt.morningSteps?.length > 0);
+  const eveningMeals = selectedMeals.filter(({meal, opt}) => opt && opt.eveningSteps?.length > 0);
+  const lunchMeals = selectedMeals.filter(({meal, opt}) => opt && opt.lunchSteps?.length > 0);
+  const morningTime = morningMeals.reduce((s, {opt}) => s + (opt.time?.active || 0), 0) + (dayBatchTasks.morning || []).reduce((s, t) => s + (parseInt(t.timeRange) || 15), 0);
+  const eveningTime = eveningMeals.reduce((s, {opt}) => s + (opt.time?.active || 0), 0) + (dayBatchTasks.evening || []).reduce((s, t) => s + (parseInt(t.timeRange) || 30), 0);
+  let html = `<div class="day-banner"><div><h2 class="day-banner-name">${dayObj.label}${dayObj.batch ? ' <em>· Batch Day</em>' : ''}</h2><div class="day-banner-type">${dayObj.type}</div></div><div class="total-time-pill">⏱ ${morningTime + eveningTime} min today</div></div>`;
+  html += `<div class="session-header"><h2 class="session-name">Morning <em>session</em></h2><span class="session-budget">${morningTime} / 15 min</span></div>`;
+  if (morningTime > 15) html += `<div class="info-box"><span class="info-title">⚠ Over budget</span>Morning is <strong>${morningTime} min</strong>.</div>`;
+  (dayBatchTasks.morning || []).forEach(task => html += renderBatchBlock(task));
+  if (morningMeals.length === 0 && (dayBatchTasks.morning || []).length === 0) html += `<div class="empty-state"><span class="big">Nothing scheduled</span>No morning cooking today.</div>`;
+  else morningMeals.forEach(({meal, opt}) => html += renderMealBlock(meal, opt, 'morningSteps'));
+  if (lunchMeals.length > 0) { html += `<div class="session-header" style="margin-top:20px;"><h2 class="session-name">Lunch <em>assembly</em></h2><span class="session-budget">${lunchMeals.reduce((s, {opt}) => s + opt.time.active, 0)} min</span></div>`; lunchMeals.forEach(({meal, opt}) => html += renderMealBlock(meal, opt, 'lunchSteps')); }
+  html += `<div class="session-header" style="margin-top:20px;"><h2 class="session-name">Evening <em>session</em></h2><span class="session-budget">${eveningTime} / 30 min</span></div>`;
+  if (eveningTime > 30) html += `<div class="info-box"><span class="info-title">⚠ Over budget</span>Evening is <strong>${eveningTime} min</strong>.</div>`;
+  (dayBatchTasks.evening || []).forEach(task => html += renderBatchBlock(task));
+  if (eveningMeals.length === 0 && (dayBatchTasks.evening || []).length === 0) html += `<div class="empty-state"><span class="big">Nothing scheduled</span>No evening cooking today.</div>`;
+  else eveningMeals.forEach(({meal, opt}) => html += renderMealBlock(meal, opt, 'eveningSteps'));
+  container.innerHTML = html;
+}
+
+function renderMealBlock(meal, opt, stepKey) {
+  const ing = (opt.ingredients || []).map(i => `<li><strong>${i.name}</strong> — ${i.qty}</li>`).join('');
+  const stp = (opt[stepKey] || []).map(s => `<li>${s}</li>`).join('');
+  const tag = (opt[stepKey] || []).length <= 3 ? 'assembly' : 'meal';
+  return `<div class="cook-block"><div class="cook-head"><div class="cook-head-left"><h3 class="cook-title">${meal.title} · ${opt.name}</h3><span class="cook-tag ${tag}">${tag === 'assembly' ? 'Assembly' : 'Meal'}</span></div><span class="cook-time">${opt.time?.active || 0} min</span></div><div class="cook-body"><div class="cook-section"><div class="cook-label">Ingredients</div><ul class="ingredient-list">${ing}</ul></div><div class="cook-section"><div class="cook-label">Method</div><ol class="steps-list">${stp}</ol></div></div></div>`;
+}
+
+function renderBatchBlock(task) {
+  const ing = task.ingredients?.length > 0 ? `<div class="cook-section"><div class="cook-label">Ingredients</div><ul class="ingredient-list">${task.ingredients.map(i => `<li><strong>${i.name}</strong> — ${i.qty}</li>`).join('')}</ul></div>` : '';
+  const stp = task.steps?.length > 0 ? `<div class="cook-section"><div class="cook-label">Method</div><ol class="steps-list">${task.steps.map(s => `<li>${s}</li>`).join('')}</ol></div>` : '';
+  const timeline = task.timeline ? `<div class="cook-section"><div class="cook-label">Minute-by-minute</div><div class="timeline">${task.timeline.map(t => `<div class="timeline-row"><span class="time-stamp">${t.time}</span><span class="time-task">${t.task}</span></div>`).join('')}</div></div>` : '';
+  return `<div class="cook-block batch"><div class="cook-head"><div class="cook-head-left"><h3 class="cook-title"><em>${task.title}</em></h3><span class="cook-tag batch-task">Batch Task</span></div><span class="cook-time">${task.timeRange}</span></div><div class="cook-body">${ing}${timeline}${stp}</div></div>`;
+}
+
+function addExtra() {
+  const name = document.getElementById('extra-name').value.trim();
+  const when = document.getElementById('extra-when').value;
+  const portion = document.getElementById('extra-portion').value.trim();
+  const cal = parseInt(document.getElementById('extra-cal').value) || 0;
+  const pro = parseInt(document.getElementById('extra-pro').value) || 0;
+  const car = parseInt(document.getElementById('extra-car').value) || 0;
+  const fat = parseInt(document.getElementById('extra-fat').value) || 0;
+  if (!name || cal === 0) { showToast('Need name and calories', 'error'); return; }
+  extras.push({ id: Date.now(), name, when, portion, cal, pro, car, fat, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+  ['extra-name','extra-portion','extra-cal','extra-pro','extra-car','extra-fat'].forEach(id => document.getElementById(id).value = '');
+  save(); renderExtras(); renderAnalytics(); showToast('Added', 'success');
+}
+
+function removeExtra(id) { const idx = extras.findIndex(e => e.id === id); if (idx >= 0) extras.splice(idx, 1); save(); renderExtras(); renderAnalytics(); }
+
+function renderExtras() {
+  const container = document.getElementById('extra-list');
+  if (extras.length === 0) { container.innerHTML = `<div class="extra-empty">No extras logged yet.</div>`; return; }
+  const whenLabels = { morning: 'Morning', midmorning: 'Mid-AM', lunch: 'Lunch', afternoon: 'Afternoon', evening: 'Evening', dinner: 'Dinner', late: 'Late Night' };
+  container.innerHTML = extras.map(e => `<li class="extra-item"><div class="extra-info"><div class="extra-name">${e.name}${e.portion ? ` <span style="color:var(--ink-faint); font-weight:400;">· ${e.portion}</span>` : ''}</div><div class="extra-meta">${e.cal} kcal · ${e.pro}P / ${e.car}C / ${e.fat}F</div><div class="extra-when">${whenLabels[e.when]} · ${e.time}</div></div><button class="btn-danger" data-remove="${e.id}">Remove</button></li>`).join('');
+  container.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => removeExtra(parseInt(btn.dataset.remove))));
+}
+
+function computeAnalytics() {
+  let planned = { cal: 0, pro: 0, car: 0, fat: 0 };
+  diet.meals.forEach(meal => { const opt = meal.options.find(o => o.id === selected[meal.id]); if (opt) ['cal','pro','car','fat'].forEach(k => planned[k] += opt.macros[k]); });
+  let actual = { cal: 0, pro: 0, car: 0, fat: 0 };
+  const ateBreakdown = [];
+  diet.meals.forEach(meal => meal.options.forEach(opt => { const key = meal.id + '-' + opt.id; if (ateState[key]) { ['cal','pro','car','fat'].forEach(k => actual[k] += opt.macros[k]); ateBreakdown.push({ name: `${meal.title} · ${opt.name}`, ...opt.macros, type: 'plan' }); } }));
+  extras.forEach(e => { ['cal','pro','car','fat'].forEach(k => actual[k] += e[k]); ateBreakdown.push({ name: e.name + (e.portion ? ` (${e.portion})` : ''), cal: e.cal, pro: e.pro, car: e.car, fat: e.fat, type: 'extra' }); });
+  return { planned, actual, ateBreakdown };
+}
+
+function renderAnalytics() {
+  const { planned, actual, ateBreakdown } = computeAnalytics();
+  document.getElementById('sum-planned').textContent = planned.cal;
+  document.getElementById('sum-actual').textContent = actual.cal;
+  const gap = actual.cal - planned.cal;
+  document.getElementById('sum-gap').textContent = (gap >= 0 ? '+' : '') + gap;
+  document.getElementById('sum-gap-label').textContent = gap === 0 ? 'on plan' : gap > 0 ? 'over plan' : 'under plan';
+  const compare = document.getElementById('compare-container');
+  const goalMax = { cal: diet.goals.cal * 1.25, pro: diet.goals.pro * 1.4, car: diet.goals.car * 1.3, fat: diet.goals.fat * 1.4 };
+  const labels = { cal: 'Calories', pro: 'Protein', car: 'Carbs', fat: 'Fat' };
+  const units = { cal: '', pro: 'g', car: 'g', fat: 'g' };
+  compare.innerHTML = ['cal','pro','car','fat'].map(key => {
+    const planPct = Math.min(100, (planned[key] / goalMax[key]) * 100);
+    const actualPct = Math.min(100, (actual[key] / goalMax[key]) * 100);
+    const delta = actual[key] - planned[key];
+    const tolerance = key === 'cal' ? 100 : 10;
+    let deltaClass = 'good', deltaText = 'on plan';
+    if (delta > tolerance) { deltaClass = 'over'; deltaText = `+${delta}${units[key]} over plan`; }
+    else if (delta < -tolerance) { deltaClass = 'under'; deltaText = `${delta}${units[key]} under plan`; }
+    let actualBarClass = 'good';
+    if (delta > tolerance) actualBarClass = 'over';
+    else if (delta < -tolerance) actualBarClass = 'under';
+    return `<div style="margin-bottom: 18px;"><div style="display:flex; justify-content:space-between; margin-bottom:6px;"><div style="font-size:12px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--ink);">${labels[key]}</div><div class="compare-delta ${deltaClass}">${deltaText}</div></div><div class="compare-bar-wrap"><span class="compare-bar-tag">Plan</span><div class="compare-bar"><div class="compare-fill plan" style="width:${planPct}%"></div></div><span class="compare-value" style="width: 60px;">${planned[key]}${units[key]}</span></div><div class="compare-bar-wrap" style="margin-top:4px;"><span class="compare-bar-tag">Actual</span><div class="compare-bar"><div class="compare-fill actual ${actualBarClass}" style="width:${actualPct}%"></div></div><span class="compare-value" style="width: 60px;">${actual[key]}${units[key]}</span></div></div>`;
+  }).join('');
+  const breakdown = document.getElementById('breakdown-container');
+  if (ateBreakdown.length === 0) breakdown.innerHTML = `<div class="extra-empty">Nothing logged as eaten yet today.</div>`;
+  else breakdown.innerHTML = `<div class="breakdown-section">${ateBreakdown.map(b => `<div class="breakdown-item"><div class="breakdown-item-name"><span class="icon">${b.type === 'extra' ? '+' : '✓'}</span>${b.name}</div><div class="breakdown-item-value">${b.cal} kcal · ${b.pro}P/${b.car}C/${b.fat}F</div></div>`).join('')}</div>`;
+}
+
+function renderShopList(containerId, data) {
+  const container = document.getElementById(containerId);
+  if (!data || Object.keys(data).length === 0) { container.innerHTML = `<div class="empty-state"><span class="big">No items</span>This diet has no items in this shopping list.</div>`; return; }
+  container.innerHTML = Object.entries(data).map(([cat, items]) => `<div class="shop-section"><h3>${cat}</h3><p class="shop-sub">${items.length} items</p><ul class="shop-list">${items.map((it, i) => `<li data-key="${containerId}-${cat}-${i}"><div class="shop-check"></div><span class="shop-name">${it.name}${it.meta ? `<span class="shop-meta">· ${it.meta}</span>` : ''}</span><span class="shop-qty">${it.qty}</span></li>`).join('')}</ul></div>`).join('');
+  container.querySelectorAll('.shop-list li').forEach(li => li.addEventListener('click', () => { li.classList.toggle('checked'); shopChecks[li.dataset.key] = li.classList.contains('checked'); save(); }));
+  applyShopChecks();
+}
+
+function applyShopChecks() { Object.entries(shopChecks).forEach(([key, val]) => { if (val) { const li = document.querySelector(`[data-key="${key}"]`); if (li) li.classList.add('checked'); } }); }
+
+function renderRules() {
+  document.getElementById('rules-list').innerHTML = (diet.rules || []).map(r => `<li>${r}</li>`).join('');
+}
+
+function renderDietTab() {
+  const totalMeals = diet.meals.length;
+  const totalOptions = diet.meals.reduce((s, m) => s + m.options.length, 0);
+  const batchDays = Object.entries(diet.batchTasks || {}).filter(([k, v]) => (v.morning?.length || 0) + (v.evening?.length || 0) > 0).map(([k]) => k.toUpperCase()).join(', ');
+  document.getElementById('diet-info').innerHTML = `
+    <div class="diet-info-row"><span class="diet-info-label">Diet Name</span><span class="diet-info-value">${diet.name}</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Calorie Target</span><span class="diet-info-value mono">${diet.goals.cal} kcal</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Protein Target</span><span class="diet-info-value mono">${diet.goals.pro} g</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Carbs Target</span><span class="diet-info-value mono">${diet.goals.car} g</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Fat Target</span><span class="diet-info-value mono">${diet.goals.fat} g</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Meal Slots</span><span class="diet-info-value">${totalMeals}</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Total Options</span><span class="diet-info-value">${totalOptions}</span></div>
+    <div class="diet-info-row"><span class="diet-info-label">Batch Days</span><span class="diet-info-value">${batchDays || 'None'}</span></div>
+  `;
+}
+
+// =================================================================
+// DIET UPLOAD / DOWNLOAD
+// =================================================================
+function uploadDiet() { document.getElementById('file-diet-import').click(); }
+
+function handleDietImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      const err = validateDiet(parsed);
+      if (err) { showToast('Invalid diet: ' + err, 'error'); return; }
+      if (!confirm(`Replace current diet with "${parsed.name}"?\n\nThis will change your meal plans and shopping lists. Your tracking data (selections, ate ticks) will be preserved where possible.`)) return;
+      diet = parsed;
+      saveDietLocal();
+      pushDietToCloud();
+      fillSelectionsFromDiet();
+      renderAll();
+      showToast('Diet loaded: ' + diet.name, 'success');
+    } catch (err) { showToast('Import failed: ' + err.message, 'error'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+}
+
+function downloadDiet() {
+  const blob = new Blob([JSON.stringify(diet, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `diet-${diet.name.toLowerCase().replace(/\s+/g, '-')}.json`; a.click();
+  URL.revokeObjectURL(url); showToast('Downloaded', 'success');
+}
+
+function downloadDietTemplate() {
+  const template = {
+    name: "My Custom Diet",
+    goals: { cal: 2000, pro: 120, car: 220, fat: 60 },
+    rules: ["Add your dietary rules here", "One per line"],
+    days: DEFAULT_DIET.days,
+    meals: [
+      {
+        id: "breakfast", title: "Breakfast", time: "9:00 AM", desc: "",
+        options: [
+          { id: "bf-example-1", name: "Example Meal Option", slot: "morning",
+            macros: { cal: 400, pro: 30, car: 40, fat: 12 },
+            time: { active: 10, total: 10 },
+            ingredients: [{ name: "Ingredient name", qty: "amount" }],
+            morningSteps: ["Step 1", "Step 2"],
+            eveningSteps: []
+          }
+        ]
+      }
+    ],
+    batchTasks: { sun: { morning: [], evening: [] }, mon: { morning: [], evening: [] } },
+    weeklyShop: { "Category": [{ name: "Item", qty: "amount" }] },
+    monthlyShop: { "Category": [{ name: "Item", qty: "amount" }] }
+  };
+  const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `diet-template.json`; a.click();
+  URL.revokeObjectURL(url); showToast('Template downloaded', 'success');
+}
+
+function resetDiet() {
+  if (!confirm('Reset to the default vegetarian diet? Your current diet customization will be lost.')) return;
+  diet = JSON.parse(JSON.stringify(DEFAULT_DIET));
+  saveDietLocal(); pushDietToCloud(); fillSelectionsFromDiet(); renderAll(); showToast('Diet reset', 'success');
+}
+
+// =================================================================
+// TRACKING EXPORT/IMPORT
+// =================================================================
+function exportJSON() {
+  const data = { type: 'tracking', exportedAt: new Date().toISOString(), dateKey: todayDateKey, selected, ateState, extras, shopChecks };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `tracking-${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url); showToast('Exported', 'success');
+}
+function importJSON() { document.getElementById('file-import').click(); }
+function handleFileImport(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!confirm('Import tracking data? Replaces current tracking.')) return;
+      selected = data.selected || {}; ateState = data.ateState || {}; extras = data.extras || []; shopChecks = data.shopChecks || {};
+      fillSelectionsFromDiet(); save(); renderAll(); showToast('Imported', 'success');
+    } catch (err) { showToast('Import failed: ' + err.message, 'error'); }
+  };
+  reader.readAsText(file); e.target.value = '';
+}
+
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const { planned, actual, ateBreakdown } = computeAnalytics();
+  const today = new Date(); const dayObj = diet.days.find(d => d.id === currentDay) || { label: currentDay };
+  const accent = [184,69,31], ink = [31,26,20], inkSoft = [90,79,63], inkFaint = [138,126,106], green = [74,107,58], red = [168,51,31], amber = [195,138,47];
+  let y = 20;
+  doc.setFontSize(22); doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text('Daily Meal Report', 20, y); y += 8;
+  doc.setFontSize(10); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`${currentUser?.email || 'User'} · ${today.toDateString()} · ${dayObj.label} · ${diet.name}`, 20, y); y += 10;
+  doc.setDrawColor(...inkFaint); doc.setFillColor(248,244,230); doc.roundedRect(20, y, 170, 28, 3, 3, 'FD');
+  doc.setFontSize(9); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'bold'); doc.text('PLANNED', 30, y+8); doc.text('ACTUALLY ATE', 90, y+8); doc.text('GAP', 150, y+8);
+  doc.setFontSize(16); doc.setTextColor(...ink); doc.text(`${planned.cal} kcal`, 30, y+18); doc.setTextColor(...accent); doc.text(`${actual.cal} kcal`, 90, y+18);
+  const gap = actual.cal - planned.cal; doc.setTextColor(...(gap > 100 ? red : gap < -100 ? amber : green)); doc.text(`${gap >= 0 ? '+' : ''}${gap} kcal`, 150, y+18); y += 36;
+  doc.setFontSize(12); doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text('Plan vs Actual', 20, y); y += 6;
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  const macros = [{label:'Calories',plan:planned.cal,actual:actual.cal,unit:' kcal',tol:100},{label:'Protein',plan:planned.pro,actual:actual.pro,unit:' g',tol:10},{label:'Carbs',plan:planned.car,actual:actual.car,unit:' g',tol:15},{label:'Fat',plan:planned.fat,actual:actual.fat,unit:' g',tol:8}];
+  doc.setFillColor(31,26,20); doc.rect(20, y, 170, 8, 'F'); doc.setTextColor(244,239,230); doc.setFont('helvetica', 'bold'); doc.text('METRIC', 25, y+5.5); doc.text('PLANNED', 70, y+5.5); doc.text('ACTUAL', 105, y+5.5); doc.text('DELTA', 140, y+5.5); doc.text('STATUS', 170, y+5.5); y += 8;
+  macros.forEach((m, i) => {
+    if (i % 2 === 0) { doc.setFillColor(250,246,238); doc.rect(20, y, 170, 8, 'F'); }
+    doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text(m.label, 25, y+5.5);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...inkSoft); doc.text(`${m.plan}${m.unit}`, 70, y+5.5); doc.text(`${m.actual}${m.unit}`, 105, y+5.5);
+    const d = m.actual - m.plan; doc.text(`${d >= 0 ? '+' : ''}${d}${m.unit}`, 140, y+5.5);
+    const status = Math.abs(d) <= m.tol ? 'On Plan' : d > 0 ? 'Over' : 'Under';
+    doc.setTextColor(...(status === 'On Plan' ? green : status === 'Over' ? red : amber)); doc.text(status, 170, y+5.5); y += 8;
+  });
+  y += 8;
+  doc.setFontSize(12); doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text('Today\'s Planned Meals', 20, y); y += 6;
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  diet.meals.forEach(meal => { const opt = meal.options.find(o => o.id === selected[meal.id]); if (!opt) return; if (y > 270) { doc.addPage(); y = 20; }
+    doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'bold'); doc.text(meal.title.toUpperCase() + ' · ' + meal.time, 20, y); y += 5;
+    doc.setTextColor(...ink); doc.setFont('helvetica', 'normal'); doc.text(`${opt.name}`, 25, y);
+    doc.setTextColor(...inkFaint); doc.text(`${opt.macros.cal} kcal | ${opt.macros.pro}P / ${opt.macros.car}C / ${opt.macros.fat}F`, 130, y); y += 7;
+  });
+  y += 4;
+  if (ateBreakdown.length > 0) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(12); doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text('What You Actually Ate', 20, y); y += 6;
+    doc.setFontSize(9);
+    ateBreakdown.forEach(b => { if (y > 280) { doc.addPage(); y = 20; }
+      doc.setTextColor(...(b.type === 'extra' ? amber : green)); doc.setFont('helvetica', 'bold'); doc.text(b.type === 'extra' ? '+ EXTRA' : '✓ PLAN', 25, y);
+      doc.setTextColor(...ink); doc.setFont('helvetica', 'normal'); doc.text(b.name.substring(0, 60), 50, y);
+      doc.setTextColor(...inkFaint); doc.text(`${b.cal}kcal | ${b.pro}/${b.car}/${b.fat}`, 150, y); y += 6;
+    });
+  }
+  doc.setFontSize(8); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`Generated ${today.toLocaleString()} · ${diet.name}`, 20, 285);
+  doc.save(`meal-report-${today.toISOString().slice(0,10)}.pdf`); showToast('PDF generated', 'success');
+}
+
+function clearTracking() {
+  if (!confirm('Clear tracking data only? Diet plan is preserved.')) return;
+  ateState = {}; extras = []; shopChecks = {};
+  selected = {}; fillSelectionsFromDiet();
+  save(); renderAll(); showToast('Tracking cleared', 'success');
+}
+
+function renderStorageInfo() {
+  const sizeKB = ((localStorage.getItem(STORAGE_KEY)?.length || 0) + (localStorage.getItem(DIET_KEY)?.length || 0)) / 1024;
+  document.getElementById('storage-info').innerHTML = `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--rule);"><span>Sync</span><strong style="color:${currentUser ? 'var(--green)' : 'var(--amber)'};">${currentUser ? 'ON · ' + currentUser.email : SYNC_ENABLED ? 'Signed out' : 'Disabled'}</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--rule);"><span>Active diet</span><strong style="color:var(--ink);">${diet.name}</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--rule);"><span>Total local size</span><strong style="color:var(--ink); font-family:'JetBrains Mono',monospace;">${sizeKB.toFixed(2)} KB</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--rule);"><span>Extras today</span><strong style="color:var(--ink);">${extras.length}</strong></div>
+    <div style="display:flex; justify-content:space-between; padding:6px 0;"><span>Ate ticks today</span><strong style="color:var(--ink);">${Object.keys(ateState).length}</strong></div>
+  `;
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+function renderAll() {
+  renderHeader(); renderDaySelector(); renderMeals(); updateTotals(); renderCooking(); renderExtras(); renderAnalytics();
+  renderShopList('weekly-container', diet.weeklyShop); renderShopList('monthly-container', diet.monthlyShop);
+  renderRules(); renderDietTab(); renderStorageInfo();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'cook') renderCooking();
+    if (tab.dataset.tab === 'analytics') renderAnalytics();
+    if (tab.dataset.tab === 'data') renderStorageInfo();
+    if (tab.dataset.tab === 'diet') renderDietTab();
+  });
+});
+
+document.getElementById('extra-add').addEventListener('click', addExtra);
+document.getElementById('btn-export').addEventListener('click', exportJSON);
+document.getElementById('btn-import').addEventListener('click', importJSON);
+document.getElementById('btn-pdf').addEventListener('click', generatePDF);
+document.getElementById('btn-clear').addEventListener('click', clearTracking);
+document.getElementById('file-import').addEventListener('change', handleFileImport);
+document.getElementById('btn-diet-upload').addEventListener('click', uploadDiet);
+document.getElementById('btn-diet-download').addEventListener('click', downloadDiet);
+document.getElementById('btn-diet-template').addEventListener('click', downloadDietTemplate);
+document.getElementById('btn-diet-reset').addEventListener('click', resetDiet);
+document.getElementById('file-diet-import').addEventListener('change', handleDietImport);
+document.getElementById('auth-send').addEventListener('click', sendMagicLink);
+document.getElementById('auth-cancel').addEventListener('click', () => document.getElementById('auth-modal').classList.remove('show'));
+// auth-actions buttons (btn-signin / btn-signout) are dynamically added/removed by updateAuthStatus
+// Use event delegation so we don't try to attach listeners to non-existent elements
+document.getElementById('auth-actions').addEventListener('click', (e) => {
+  if (e.target.id === 'btn-signin' || e.target.closest('#btn-signin')) {
+    document.getElementById('auth-modal').classList.add('show');
+  } else if (e.target.id === 'btn-signout' || e.target.closest('#btn-signout')) {
+    signOut();
+  }
+});
+
+renderAll();
+initAuth();
+</script>
+</body>
+</html>
