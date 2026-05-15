@@ -731,6 +731,25 @@ async function signOut() {
   showToast('Signed out', 'success');
 }
 
+function attachAuthButtonListeners() {
+  const signinBtn = document.getElementById('btn-signin');
+  if (signinBtn && !signinBtn.dataset.bound) {
+    signinBtn.dataset.bound = '1';
+    signinBtn.addEventListener('click', () => {
+      document.getElementById('auth-modal').classList.add('show');
+      setTimeout(() => {
+        const input = document.getElementById('auth-email-input');
+        if (input) input.focus();
+      }, 100);
+    });
+  }
+  const signoutBtn = document.getElementById('btn-signout');
+  if (signoutBtn && !signoutBtn.dataset.bound) {
+    signoutBtn.dataset.bound = '1';
+    signoutBtn.addEventListener('click', signOut);
+  }
+}
+
 function updateAuthStatus(state) {
   const bar = document.getElementById('auth-status');
   const text = document.getElementById('auth-status-text');
@@ -755,6 +774,7 @@ function updateAuthStatus(state) {
     bar.classList.add('local-only');
     text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Offline · local`;
   }
+  attachAuthButtonListeners();
 }
 
 // =================================================================
@@ -1168,15 +1188,12 @@ document.getElementById('btn-diet-reset').addEventListener('click', resetDiet);
 document.getElementById('file-diet-import').addEventListener('change', handleDietImport);
 document.getElementById('auth-send').addEventListener('click', sendMagicLink);
 document.getElementById('auth-cancel').addEventListener('click', () => document.getElementById('auth-modal').classList.remove('show'));
-// auth-actions buttons (btn-signin / btn-signout) are dynamically added/removed by updateAuthStatus
-// Use event delegation so we don't try to attach listeners to non-existent elements
-document.getElementById('auth-actions').addEventListener('click', (e) => {
-  if (e.target.id === 'btn-signin' || e.target.closest('#btn-signin')) {
-    document.getElementById('auth-modal').classList.add('show');
-  } else if (e.target.id === 'btn-signout' || e.target.closest('#btn-signout')) {
-    signOut();
-  }
+// Close modal when clicking the backdrop (outside the modal box)
+document.getElementById('auth-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'auth-modal') document.getElementById('auth-modal').classList.remove('show');
 });
+// Bind the initial sign-in button (will rebind after every updateAuthStatus call)
+attachAuthButtonListeners();
 
 renderAll();
 initAuth();
