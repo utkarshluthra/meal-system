@@ -888,11 +888,24 @@ function saveTrackingLocal() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastSaved: new Date().toISOString(), dateKey: todayDateKey, selected, ateState, extras, shopChecks })); } catch (e) {}
 }
 
+// Debounced cloud sync — short window, optimistic UI
+const SYNC_DEBOUNCE_MS = 400;
+let pendingSync = false;
+
 function scheduleSync() {
   if (!sb || !currentUser) return;
+  pendingSync = true;
+  // Show "Saved" optimistically — the user's intent is captured locally
+  updateAuthStatus('online');
   if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(pushTrackingToCloud, 2000);
-  updateAuthStatus('syncing');
+  syncTimer = setTimeout(pushTrackingToCloud, SYNC_DEBOUNCE_MS);
+}
+
+// Flush any pending sync immediately (used when app loses focus)
+function flushSync() {
+  if (!sb || !currentUser || !pendingSync) return;
+  if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  pushTrackingToCloud();
 }
 
 async function pushTrackingToCloud() {
@@ -900,8 +913,14 @@ async function pushTrackingToCloud() {
   try {
     const { error } = await sb.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: todayDateKey }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
+    pendingSync = false;
     updateAuthStatus('online');
-  } catch (e) { updateAuthStatus('offline'); }
+  } catch (e) {
+    console.warn('[Sync] push failed:', e);
+    updateAuthStatus('offline');
+    // Retry once after 3 seconds
+    setTimeout(() => { if (pendingSync) pushTrackingToCloud(); }, 3000);
+  }
 }
 
 async function pullTrackingFromCloud() {
@@ -1135,14 +1154,12 @@ function updateAuthStatus(state) {
     actions.innerHTML = '<button class="auth-btn" id="btn-signin">Sign In to Sync</button>';
   } else if (state === 'online') {
     bar.classList.add('online');
-    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Synced`;
+    const statusLabel = pendingSync ? 'Saving' : 'Synced';
+    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · ${statusLabel}`;
     actions.innerHTML = '<button class="auth-btn secondary" id="btn-signout">Sign Out</button>';
-  } else if (state === 'syncing') {
-    bar.classList.add('online');
-    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Syncing...`;
   } else if (state === 'offline') {
     bar.classList.add('local-only');
-    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Offline · local`;
+    text.innerHTML = `<span class="auth-email">${currentUser.email}</span> · Offline · saved locally`;
   }
   attachAuthButtonListeners();
 }
@@ -1586,6 +1603,43 @@ setTimeout(() => {
 }, 5000);
 
 initAuth();
+
+// =================================================================
+// SYNC: Flush on page hide, pull on page show
+// =================================================================
+// When user backgrounds the app or closes the tab, flush any pending sync immediately
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    flushSync();
+  } else if (document.visibilityState === 'visible' && sb && currentUser) {
+    // Returned to app - pull latest from cloud in case another device updated
+    pullAndMergeIfNewer();
+  }
+});
+
+// pagehide fires reliably on iOS Safari when switching tabs/apps
+window.addEventListener('pagehide', flushSync);
+// beforeunload as backup for desktop browsers
+window.addEventListener('beforeunload', flushSync);
+
+async function pullAndMergeIfNewer() {
+  if (!sb || !currentUser || pendingSync) return; // skip if we have pending local changes
+  try {
+    const cloud = await pullTrackingFromCloud();
+    if (!cloud) return;
+    const local = loadTracking();
+    if (local && new Date(cloud.updated_at) <= new Date(local.lastSaved || 0)) return; // local is newer
+    // Cloud is newer - merge
+    selected = cloud.selected || {};
+    ateState = cloud.dateKey === todayDateKey ? (cloud.ateState || {}) : {};
+    extras = cloud.dateKey === todayDateKey ? (cloud.extras || []) : [];
+    shopChecks = cloud.shopChecks || {};
+    fillSelectionsFromDiet();
+    saveTrackingLocal();
+    renderAll();
+    showToast('Synced from cloud', 'success');
+  } catch (e) { console.warn('[Sync] pull-on-focus failed:', e); }
+}
 </script>
 </body>
 </html>
