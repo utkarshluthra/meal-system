@@ -2,8 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Daily Meal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#f4efe6" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Meals" />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<title>Daily Meal System — Plan, Cook, Track</title>
+<meta name="description" content="A focused meal planning tool. Pick today's meals, get exact cooking instructions for your 15-min morning and 30-min evening kitchen slots, and track what you actually ate against your macros." />
+
+<!-- Favicon: rust dot on cream, scalable SVG -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23f4efe6'/><text x='50' y='75' font-family='Georgia,serif' font-size='90' font-style='italic' font-weight='300' text-anchor='middle' fill='%23b8451f'>.</text></svg>" />
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23f4efe6'/><text x='50' y='75' font-family='Georgia,serif' font-size='90' font-style='italic' font-weight='300' text-anchor='middle' fill='%23b8451f'>.</text></svg>" />
+
+<!-- Open Graph / social share -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Daily Meal System — Plan, Cook, Track" />
+<meta property="og:description" content="A focused meal planning tool. Pick meals, get cooking instructions for your time budget, and track macros honestly. Designed for busy founders." />
+<meta property="og:image" content="og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Daily Meal System" />
+<meta name="twitter:description" content="Plan meals. Cook within your kitchen time budget. Track macros honestly." />
+<meta name="twitter:image" content="og-image.png" />
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -50,12 +76,69 @@
   .diet-badge { display: inline-block; margin-top: 8px; padding: 4px 12px; background: var(--accent-bg); color: var(--accent); border-radius: 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
 
   .day-selector { display: flex; gap: 6px; margin-bottom: 18px; overflow-x: auto; padding: 4px; -webkit-overflow-scrolling: touch; }
-  .day-pill { flex-shrink: 0; padding: 10px 14px; background: var(--bg-card); border: 1.5px solid var(--rule); border-radius: 12px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.2s ease; text-align: center; min-width: 64px; }
-  .day-pill .day-short { display: block; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
-  .day-pill .day-num { display: block; font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; }
-  .day-pill.active { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+  .day-pill { flex-shrink: 0; padding: 10px 12px; background: var(--bg-card); border: 1.5px solid var(--rule); border-radius: 12px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.2s ease; text-align: center; min-width: 72px; }
+  .day-pill .day-short { display: block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
+  .day-pill .day-num { display: block; font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; }
+  .day-pill.empty { opacity: 0.45; }
+  .day-pill.today { border-color: var(--accent); }
+  .day-pill.today .day-short { color: var(--accent); font-weight: 700; }
+  .day-pill.active { background: var(--ink); border-color: var(--ink); color: var(--bg); opacity: 1; }
   .day-pill.active .day-short { color: var(--accent-soft); }
   .day-pill.batch::after { content: "●"; display: block; color: var(--accent); font-size: 8px; margin-top: 2px; }
+  .day-pill.active.batch::after { color: var(--accent-soft); }
+
+  .readonly-banner {
+    background: var(--bg-deep);
+    border: 1px dashed var(--ink-faint);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .readonly-banner strong { color: var(--ink); }
+  .readonly-jump {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .readonly-jump:hover { background: var(--ink); }
+
+  .report-preview {
+    background: #ECE5D7;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    border-left: 3px solid #25D366;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .meal.readonly .option { cursor: default; }
+  .option.readonly { cursor: default; }
+  .option.readonly:hover { background: var(--bg); }
+  .option.readonly.selected { border-color: var(--ink-faint); background: var(--bg-deep); }
+  .option-eaten.unchecked-readonly { opacity: 0.3; cursor: default; }
+  .meal.readonly::before { background: var(--ink-faint); }
 
   .tabs { display: flex; gap: 4px; background: var(--bg-deep); padding: 4px; border-radius: 12px; margin-bottom: 20px; overflow-x: auto; }
   .tab { flex: 1; min-width: max-content; padding: 10px 14px; background: transparent; border: none; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em; white-space: nowrap; }
@@ -649,8 +732,32 @@
     </div>
 
     <div class="tab-content" id="tab-data">
-      <div class="card card-dark"><h2>Data <em>management</em></h2><p class="card-sub">Export, import, share with trainer</p></div>
-      <div class="card"><h2>Trainer <em>report</em></h2><p class="card-sub">PDF of today's plan vs actual.</p><button class="btn" id="btn-pdf">📄 Generate Today's PDF Report</button></div>
+      <div class="card card-dark"><h2>Data <em>management</em></h2><p class="card-sub">Daily updates to trainer, exports, backups</p></div>
+
+      <div class="card">
+        <h2>Daily <em>message</em></h2>
+        <p class="card-sub">A short WhatsApp-ready update for your trainer. Auto-formatted from <span id="report-date-label">today</span>'s data.</p>
+
+        <div id="report-preview" class="report-preview"></div>
+
+        <div class="btn-grid" style="margin-top: 14px;">
+          <button class="btn" id="btn-whatsapp">💬 Send via WhatsApp</button>
+          <button class="btn btn-secondary" id="btn-copy-msg">📋 Copy Message</button>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--rule);">
+          <label class="form-label">Trainer's WhatsApp Number (optional)</label>
+          <input type="tel" class="form-input" id="trainer-number" placeholder="+91 98765 43210" />
+          <p style="font-size: 10px; color: var(--ink-faint); margin-top: 6px; line-height: 1.5;">If set, the button opens WhatsApp directly to their chat. Otherwise it opens WhatsApp's share sheet so you can pick a recipient. Include country code (e.g. +91 for India).</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Weekly <em>PDF</em></h2>
+        <p class="card-sub">For deeper end-of-week reviews. Works on any selected day.</p>
+        <button class="btn btn-secondary" id="btn-pdf">📄 Generate PDF Report</button>
+      </div>
+
       <div class="card"><h2>Tracking <em>backup</em></h2><p class="card-sub">Selections, ate ticks, and extras (not the diet plan itself).</p><div class="btn-grid"><button class="btn btn-secondary" id="btn-export">⬇ Export JSON</button><button class="btn btn-secondary" id="btn-import">⬆ Import JSON</button></div><input type="file" id="file-import" accept=".json" style="display:none;" /></div>
       <div class="card"><h2>Storage <em>info</em></h2><p class="card-sub">What's saved and where</p><div id="storage-info" style="font-size:13px; color:var(--ink-soft); line-height:1.7;"></div><button class="btn btn-secondary btn-small" id="btn-clear" style="margin-top:14px;">Clear Tracking Data</button></div>
     </div>
@@ -804,11 +911,35 @@ const DEFAULT_DIET = {
 // =================================================================
 const STORAGE_KEY = 'meal_system_v2_tracking';
 const DIET_KEY = 'meal_system_v2_diet';
-let currentDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+const HISTORY_KEY = 'meal_system_v2_history';
+
+// Date helpers — work in ISO date strings (YYYY-MM-DD)
+function dateToISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function todayISO() { return dateToISO(new Date()); }
+function dayIdFromISO(iso) {
+  // 'YYYY-MM-DD' -> 'sun'|'mon'|...
+  const d = new Date(iso + 'T00:00:00');
+  return ['sun','mon','tue','wed','thu','fri','sat'][d.getDay()];
+}
+function formatDateShort(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+}
+
+let currentDate = todayISO(); // ISO date being viewed
 let selected = {}, ateState = {}, extras = [], shopChecks = {};
-let diet = null; // dynamically loaded
-let todayDateKey = new Date().toDateString();
+let diet = null;
+let historyCache = {}; // dateISO -> snapshot { selected, ateState, extras }
 let syncTimer = null;
+let pendingSync = false;
+
+function isViewingToday() { return currentDate === todayISO(); }
+function currentDay() { return dayIdFromISO(currentDate); }
 
 // =================================================================
 // DIET VALIDATION
@@ -885,12 +1016,83 @@ function loadTracking() {
 }
 
 function saveTrackingLocal() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastSaved: new Date().toISOString(), dateKey: todayDateKey, selected, ateState, extras, shopChecks })); } catch (e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastSaved: new Date().toISOString(), dateKey: todayISO(), selected, ateState, extras, shopChecks })); } catch (e) {}
+}
+
+// =================================================================
+// HISTORY: per-day snapshots
+// =================================================================
+function loadHistoryLocal() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    historyCache = raw ? JSON.parse(raw) : {};
+  } catch (e) { historyCache = {}; }
+}
+
+function saveSnapshotLocal(dateISO, snapshot) {
+  historyCache[dateISO] = { ...snapshot, savedAt: new Date().toISOString() };
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(historyCache)); } catch (e) { console.warn('history save failed', e); }
+}
+
+async function pushSnapshotToCloud(dateISO, snapshot) {
+  if (!sb || !currentUser) return;
+  try {
+    const { error } = await sb.from('meal_history').upsert({
+      user_id: currentUser.id,
+      date: dateISO,
+      data: snapshot
+    }, { onConflict: 'user_id,date' });
+    if (error) throw error;
+  } catch (e) { console.warn('[History] push failed:', e); }
+}
+
+async function pullHistoryFromCloud() {
+  if (!sb || !currentUser) return;
+  try {
+    // Pull last 30 days
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
+    const { data, error } = await sb.from('meal_history')
+      .select('date, data')
+      .eq('user_id', currentUser.id)
+      .gte('date', dateToISO(cutoff))
+      .order('date', { ascending: false });
+    if (error) throw error;
+    if (data) {
+      data.forEach(row => { historyCache[row.date] = row.data; });
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(historyCache)); } catch (e) {}
+    }
+  } catch (e) { console.warn('[History] pull failed:', e); }
+}
+
+// Load any day's state (today = live working state, past = from cache)
+function loadDayState(dateISO) {
+  if (dateISO === todayISO()) {
+    // Switching back to today — restore from saved tracking
+    const live = loadTracking();
+    if (live && live.dateKey === todayISO()) {
+      selected = live.selected || {};
+      ateState = live.ateState || {};
+      extras = live.extras || [];
+      shopChecks = live.shopChecks || {};
+    }
+    fillSelectionsFromDiet();
+    return;
+  }
+  // Past day — read-only
+  const snap = historyCache[dateISO];
+  if (snap) {
+    selected = snap.selected || {};
+    ateState = snap.ateState || {};
+    extras = snap.extras || [];
+  } else {
+    // No data for that day
+    selected = {}; ateState = {}; extras = [];
+  }
+  // Shopping checks are universal across days, don't reset
 }
 
 // Debounced cloud sync — short window, optimistic UI
 const SYNC_DEBOUNCE_MS = 400;
-let pendingSync = false;
 
 function scheduleSync() {
   if (!sb || !currentUser) return;
@@ -911,8 +1113,12 @@ function flushSync() {
 async function pushTrackingToCloud() {
   if (!sb || !currentUser) return;
   try {
-    const { error } = await sb.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: todayDateKey }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    const today = todayISO();
+    // Write working state to meal_data
+    const { error } = await sb.from('meal_data').upsert({ user_id: currentUser.id, data: { selected, ateState, extras, shopChecks, dateKey: today }, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
+    // Also write today's snapshot to meal_history so it shows up across devices
+    pushSnapshotToCloud(today, { selected, ateState, extras });
     pendingSync = false;
     updateAuthStatus('online');
   } catch (e) {
@@ -932,7 +1138,13 @@ async function pullTrackingFromCloud() {
   } catch (e) { return null; }
 }
 
-function save() { saveTrackingLocal(); scheduleSync(); }
+function save() {
+  if (!isViewingToday()) return; // never write when viewing a past day
+  saveTrackingLocal();
+  // Also keep today's snapshot in history cache up to date (in case of midnight rollover)
+  saveSnapshotLocal(todayISO(), { selected, ateState, extras });
+  scheduleSync();
+}
 
 // =================================================================
 // AUTH
@@ -1004,13 +1216,15 @@ async function onSignedIn() {
   const localTracking = loadTracking();
   if (cloudTracking && (!localTracking || new Date(cloudTracking.updated_at) > new Date(localTracking.lastSaved || 0))) {
     selected = cloudTracking.selected || {};
-    ateState = cloudTracking.dateKey === todayDateKey ? (cloudTracking.ateState || {}) : {};
-    extras = cloudTracking.dateKey === todayDateKey ? (cloudTracking.extras || []) : [];
+    ateState = cloudTracking.dateKey === todayISO() ? (cloudTracking.ateState || {}) : {};
+    extras = cloudTracking.dateKey === todayISO() ? (cloudTracking.extras || []) : [];
     shopChecks = cloudTracking.shopChecks || {};
     saveTrackingLocal();
   } else if (localTracking) {
     pushTrackingToCloud();
   }
+  // Pull history snapshots (last 30 days)
+  await pullHistoryFromCloud();
   fillSelectionsFromDiet();
   renderAll();
 }
@@ -1173,16 +1387,34 @@ function fillSelectionsFromDiet() {
 }
 
 const storedTracking = loadTracking();
-if (storedTracking && storedTracking.dateKey === todayDateKey) {
+if (storedTracking && storedTracking.dateKey === todayISO()) {
   selected = storedTracking.selected || {}; ateState = storedTracking.ateState || {}; extras = storedTracking.extras || []; shopChecks = storedTracking.shopChecks || {};
 } else if (storedTracking) {
+  // Old stored tracking is from a previous day — snapshot it into history first
+  if (storedTracking.dateKey) {
+    saveSnapshotLocal(storedTracking.dateKey, {
+      selected: storedTracking.selected || {},
+      ateState: storedTracking.ateState || {},
+      extras: storedTracking.extras || []
+    });
+  }
   selected = storedTracking.selected || {}; ateState = {}; extras = []; shopChecks = storedTracking.shopChecks || {};
 }
+loadHistoryLocal();
 fillSelectionsFromDiet();
 
 function checkDayRollover() {
-  const newKey = new Date().toDateString();
-  if (newKey !== todayDateKey) { ateState = {}; extras = []; todayDateKey = newKey; currentDay = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()]; save(); renderAll(); }
+  const newKey = todayISO();
+  if (currentDate !== newKey && isViewingToday() === false) return; // user is viewing past, don't reset
+  if (currentDate !== newKey) {
+    // We're on today's view but the date just changed — snapshot old day and reset
+    saveSnapshotLocal(currentDate, { selected, ateState, extras });
+    pushSnapshotToCloud(currentDate, { selected, ateState, extras });
+    ateState = {}; extras = [];
+    currentDate = newKey;
+    save();
+    renderAll();
+  }
 }
 setInterval(checkDayRollover, 60000);
 
@@ -1196,9 +1428,27 @@ function renderHeader() {
 function renderDaySelector() {
   const container = document.getElementById('day-selector');
   const days = (diet && Array.isArray(diet.days)) ? diet.days : DEFAULT_DIET.days;
-  const ordered = ['mon','tue','wed','thu','fri','sat','sun'].map(id => days.find(d => d.id === id) || { id, short: id.slice(0,3), label: id, batch: false });
-  container.innerHTML = ordered.map(d => `<button class="day-pill ${d.id === currentDay ? 'active' : ''} ${d.batch ? 'batch' : ''}" data-day="${d.id}"><span class="day-short">${d.short}</span><span class="day-num">${(d.label || d.id).slice(0,3)}</span></button>`).join('');
-  container.querySelectorAll('.day-pill').forEach(btn => btn.addEventListener('click', () => { currentDay = btn.dataset.day; renderDaySelector(); renderCooking(); }));
+  // Build last 7 days ending today (oldest first, today last)
+  const dates = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const iso = dateToISO(d);
+    const dayId = dayIdFromISO(iso);
+    const dayObj = days.find(x => x.id === dayId) || { id: dayId, short: dayId.toUpperCase().slice(0,3), batch: false };
+    dates.push({ iso, dayId, short: dayObj.short, batch: dayObj.batch, isToday: iso === todayISO() });
+  }
+  container.innerHTML = dates.map(d => {
+    const isActive = d.iso === currentDate;
+    const hasData = !!historyCache[d.iso] || d.isToday;
+    const dateLabel = formatDateShort(d.iso);
+    return `<button class="day-pill ${isActive ? 'active' : ''} ${d.batch ? 'batch' : ''} ${d.isToday ? 'today' : ''} ${!hasData && !d.isToday ? 'empty' : ''}" data-date="${d.iso}"><span class="day-short">${d.short}${d.isToday ? ' · TODAY' : ''}</span><span class="day-num">${dateLabel}</span></button>`;
+  }).join('');
+  container.querySelectorAll('.day-pill').forEach(btn => btn.addEventListener('click', () => {
+    currentDate = btn.dataset.date;
+    loadDayState(currentDate);
+    renderAll();
+  }));
 }
 
 function renderMeals() {
@@ -1207,7 +1457,15 @@ function renderMeals() {
     container.innerHTML = `<div class="empty-state"><span class="big">Diet not loaded</span>Try resetting the diet in the Diet tab.</div>`;
     return;
   }
-  container.innerHTML = diet.meals.map(meal => {
+  const readOnly = !isViewingToday();
+  const hasData = Object.keys(ateState).length > 0 || extras.length > 0 || Object.keys(selected).length > 0;
+  let bannerHTML = '';
+  if (readOnly) {
+    const d = new Date(currentDate + 'T00:00:00');
+    const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    bannerHTML = `<div class="readonly-banner">📖 Viewing <strong>${dayLabel}</strong> · Read only${!hasData ? ' · No data recorded for this day' : ''} <button class="readonly-jump" data-jump-today>Jump to today</button></div>`;
+  }
+  container.innerHTML = bannerHTML + diet.meals.map(meal => {
     const isForced = meal.forced;
     const options = Array.isArray(meal.options) ? meal.options : [];
     const optsHTML = options.map(opt => {
@@ -1215,10 +1473,21 @@ function renderMeals() {
       const isSelected = selected[meal.id] === opt.id;
       const ateKey = meal.id + '-' + opt.id;
       const isAte = ateState[ateKey];
-      return `<div class="option ${isSelected ? 'selected' : ''}" data-meal="${meal.id}" data-opt="${opt.id}"><div class="option-header">${!isForced ? '<div class="option-radio" data-action="select"></div>' : '<div style="width:16px;"></div>'}<div class="option-main" data-action="select"><div class="option-name">${opt.name || 'Unnamed'}</div><div class="option-macros">${macros.cal || 0} kcal · ${macros.pro || 0}P / ${macros.car || 0}C / ${macros.fat || 0}F</div></div><button class="option-eaten ${isAte ? 'checked' : ''}" data-action="ate"><div class="eaten-box"></div><span class="eaten-label">Ate</span></button></div></div>`;
+      const ateBtnHTML = readOnly
+        ? `<span class="option-eaten ${isAte ? 'checked' : 'unchecked-readonly'}"><div class="eaten-box"></div><span class="eaten-label">${isAte ? 'Ate' : '—'}</span></span>`
+        : `<button class="option-eaten ${isAte ? 'checked' : ''}" data-action="ate"><div class="eaten-box"></div><span class="eaten-label">Ate</span></button>`;
+      return `<div class="option ${isSelected ? 'selected' : ''} ${readOnly ? 'readonly' : ''}" data-meal="${meal.id}" data-opt="${opt.id}"><div class="option-header">${!isForced && !readOnly ? '<div class="option-radio" data-action="select"></div>' : '<div style="width:16px;"></div>'}<div class="option-main" ${readOnly ? '' : 'data-action="select"'}><div class="option-name">${opt.name || 'Unnamed'}</div><div class="option-macros">${macros.cal || 0} kcal · ${macros.pro || 0}P / ${macros.car || 0}C / ${macros.fat || 0}F</div></div>${ateBtnHTML}</div></div>`;
     }).join('');
-    return `<section class="meal"><div class="meal-head"><div class="meal-head-top"><h2 class="meal-title">${meal.title || meal.id}</h2><span class="meal-time">${meal.time || ''}</span></div>${meal.desc ? `<p class="meal-desc">${meal.desc}</p>` : ''}</div><div class="options">${optsHTML}</div></section>`;
+    return `<section class="meal ${readOnly ? 'readonly' : ''}"><div class="meal-head"><div class="meal-head-top"><h2 class="meal-title">${meal.title || meal.id}</h2><span class="meal-time">${meal.time || ''}</span></div>${meal.desc ? `<p class="meal-desc">${meal.desc}</p>` : ''}</div><div class="options">${optsHTML}</div></section>`;
   }).join('');
+  // Bind read-only banner jump button
+  const jumpBtn = container.querySelector('[data-jump-today]');
+  if (jumpBtn) jumpBtn.addEventListener('click', () => {
+    currentDate = todayISO();
+    loadDayState(currentDate);
+    renderAll();
+  });
+  if (readOnly) return; // no interaction handlers on read-only meals
   container.querySelectorAll('.option').forEach(el => {
     const mealId = el.dataset.meal; const optId = el.dataset.opt;
     el.querySelectorAll('[data-action="select"]').forEach(t => t.addEventListener('click', e => { e.stopPropagation(); const meal = diet.meals.find(m => m.id === mealId); if (meal.forced) return; selected[mealId] = optId; save(); renderMeals(); updateTotals(); renderCooking(); renderAnalytics(); }));
@@ -1238,8 +1507,9 @@ function updateTotals() {
 
 function renderCooking() {
   const container = document.getElementById('cook-container');
-  const dayObj = diet.days.find(d => d.id === currentDay) || { id: currentDay, label: currentDay, type: '', batch: false };
-  const dayBatchTasks = (diet.batchTasks && diet.batchTasks[currentDay]) || { morning: [], evening: [] };
+  const dayId = currentDay();
+  const dayObj = diet.days.find(d => d.id === dayId) || { id: dayId, label: dayId, type: '', batch: false };
+  const dayBatchTasks = (diet.batchTasks && diet.batchTasks[dayId]) || { morning: [], evening: [] };
   const selectedMeals = diet.meals.map(m => ({ meal: m, opt: m.options.find(o => o.id === selected[m.id]) }));
   const morningMeals = selectedMeals.filter(({meal, opt}) => opt && opt.morningSteps?.length > 0);
   const eveningMeals = selectedMeals.filter(({meal, opt}) => opt && opt.eveningSteps?.length > 0);
@@ -1276,6 +1546,7 @@ function renderBatchBlock(task) {
 }
 
 function addExtra() {
+  if (!isViewingToday()) { showToast('Cannot edit past days', 'error'); return; }
   const name = document.getElementById('extra-name').value.trim();
   const when = document.getElementById('extra-when').value;
   const portion = document.getElementById('extra-portion').value.trim();
@@ -1289,14 +1560,23 @@ function addExtra() {
   save(); renderExtras(); renderAnalytics(); showToast('Added', 'success');
 }
 
-function removeExtra(id) { const idx = extras.findIndex(e => e.id === id); if (idx >= 0) extras.splice(idx, 1); save(); renderExtras(); renderAnalytics(); }
+function removeExtra(id) {
+  if (!isViewingToday()) return;
+  const idx = extras.findIndex(e => e.id === id);
+  if (idx >= 0) extras.splice(idx, 1);
+  save(); renderExtras(); renderAnalytics();
+}
 
 function renderExtras() {
   const container = document.getElementById('extra-list');
-  if (extras.length === 0) { container.innerHTML = `<div class="extra-empty">No extras logged yet.</div>`; return; }
+  const readOnly = !isViewingToday();
+  // Hide / disable the form when read-only
+  const formCard = document.querySelector('#tab-log .card:first-child');
+  if (formCard) formCard.style.display = readOnly ? 'none' : '';
+  if (extras.length === 0) { container.innerHTML = `<div class="extra-empty">No extras logged${readOnly ? ' for this day.' : ' yet.'}</div>`; return; }
   const whenLabels = { morning: 'Morning', midmorning: 'Mid-AM', lunch: 'Lunch', afternoon: 'Afternoon', evening: 'Evening', dinner: 'Dinner', late: 'Late Night' };
-  container.innerHTML = extras.map(e => `<li class="extra-item"><div class="extra-info"><div class="extra-name">${e.name}${e.portion ? ` <span style="color:var(--ink-faint); font-weight:400;">· ${e.portion}</span>` : ''}</div><div class="extra-meta">${e.cal} kcal · ${e.pro}P / ${e.car}C / ${e.fat}F</div><div class="extra-when">${whenLabels[e.when]} · ${e.time}</div></div><button class="btn-danger" data-remove="${e.id}">Remove</button></li>`).join('');
-  container.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => removeExtra(parseInt(btn.dataset.remove))));
+  container.innerHTML = extras.map(e => `<li class="extra-item"><div class="extra-info"><div class="extra-name">${e.name}${e.portion ? ` <span style="color:var(--ink-faint); font-weight:400;">· ${e.portion}</span>` : ''}</div><div class="extra-meta">${e.cal} kcal · ${e.pro}P / ${e.car}C / ${e.fat}F</div><div class="extra-when">${whenLabels[e.when] || e.when} · ${e.time || ''}</div></div>${readOnly ? '' : `<button class="btn-danger" data-remove="${e.id}">Remove</button>`}</li>`).join('');
+  if (!readOnly) container.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => removeExtra(parseInt(btn.dataset.remove))));
 }
 
 function computeAnalytics() {
@@ -1440,7 +1720,7 @@ function resetDiet() {
 // TRACKING EXPORT/IMPORT
 // =================================================================
 function exportJSON() {
-  const data = { type: 'tracking', exportedAt: new Date().toISOString(), dateKey: todayDateKey, selected, ateState, extras, shopChecks };
+  const data = { type: 'tracking', exportedAt: new Date().toISOString(), dateKey: todayISO(), selected, ateState, extras, shopChecks };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = `tracking-${new Date().toISOString().slice(0,10)}.json`; a.click();
@@ -1461,15 +1741,145 @@ function handleFileImport(e) {
   reader.readAsText(file); e.target.value = '';
 }
 
+// =================================================================
+// TRAINER MESSAGE (WhatsApp-formatted)
+// =================================================================
+const TRAINER_NUMBER_KEY = 'meal_system_v2_trainer_number';
+
+function getTrainerNumber() {
+  try { return localStorage.getItem(TRAINER_NUMBER_KEY) || ''; } catch (e) { return ''; }
+}
+
+function setTrainerNumber(num) {
+  try { localStorage.setItem(TRAINER_NUMBER_KEY, num); } catch (e) {}
+}
+
+function buildTrainerMessage() {
+  const { planned, actual, ateBreakdown } = computeAnalytics();
+  const reportDate = new Date(currentDate + 'T00:00:00');
+  const dateStr = reportDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+  const tag = isViewingToday() ? "Today's update" : `Update from ${dateStr.split(',')[0]}`;
+  const goals = diet.goals || { cal: 0, pro: 0, car: 0, fat: 0 };
+
+  const calDelta = actual.cal - planned.cal;
+  const proDelta = actual.pro - planned.pro;
+  const carDelta = actual.car - planned.car;
+  const fatDelta = actual.fat - planned.fat;
+  const fmt = (n) => (n >= 0 ? '+' : '') + n;
+
+  // Status emoji based on calorie adherence
+  const calOff = Math.abs(calDelta);
+  let statusEmoji = '✅';
+  if (calOff > 300) statusEmoji = '⚠️';
+  else if (calOff > 150) statusEmoji = '🟡';
+
+  // Headline summary
+  const adherenceText = calOff <= 150 ? 'On plan' : (calDelta > 0 ? `Over by ${calDelta} kcal` : `Under by ${Math.abs(calDelta)} kcal`);
+
+  // Meals eaten (planned items)
+  const ateMeals = ateBreakdown.filter(b => b.type === 'plan');
+  const extrasList = ateBreakdown.filter(b => b.type === 'extra');
+
+  let msg = `*${tag}*\n`;
+  msg += `${dateStr}\n`;
+  msg += `─────────────\n\n`;
+
+  msg += `${statusEmoji} *${adherenceText}*\n\n`;
+
+  msg += `*Macros*\n`;
+  msg += `Cal: ${actual.cal} / ${planned.cal} (${fmt(calDelta)})\n`;
+  msg += `Pro: ${actual.pro}g / ${planned.pro}g (${fmt(proDelta)})\n`;
+  msg += `Car: ${actual.car}g / ${planned.car}g (${fmt(carDelta)})\n`;
+  msg += `Fat: ${actual.fat}g / ${planned.fat}g (${fmt(fatDelta)})\n\n`;
+
+  if (ateMeals.length > 0) {
+    msg += `*Ate from plan (${ateMeals.length})*\n`;
+    ateMeals.forEach(m => {
+      msg += `• ${m.name} _(${m.cal}kcal)_\n`;
+    });
+    msg += `\n`;
+  }
+
+  if (extrasList.length > 0) {
+    msg += `*Extras logged (${extrasList.length})*\n`;
+    extrasList.forEach(e => {
+      msg += `• ${e.name} _(${e.cal}kcal)_\n`;
+    });
+    msg += `\n`;
+  }
+
+  if (ateMeals.length === 0 && extrasList.length === 0) {
+    msg += `_No meals logged yet_\n\n`;
+  }
+
+  msg += `─────────────\n`;
+  msg += `_${diet.name} · sent from meal-system_`;
+
+  return msg;
+}
+
+function renderTrainerPreview() {
+  const preview = document.getElementById('report-preview');
+  if (!preview) return;
+  preview.textContent = buildTrainerMessage();
+  const label = document.getElementById('report-date-label');
+  if (label) label.textContent = isViewingToday() ? "today" : "this day";
+  // Refresh trainer number field
+  const numField = document.getElementById('trainer-number');
+  if (numField && !numField.dataset.bound) {
+    numField.dataset.bound = '1';
+    numField.value = getTrainerNumber();
+    numField.addEventListener('input', () => setTrainerNumber(numField.value.trim()));
+  }
+}
+
+function sendViaWhatsApp() {
+  const msg = buildTrainerMessage();
+  const encoded = encodeURIComponent(msg);
+  const number = getTrainerNumber().replace(/[^\d]/g, ''); // strip non-digits
+  let url;
+  if (number) {
+    url = `https://wa.me/${number}?text=${encoded}`;
+  } else {
+    url = `https://wa.me/?text=${encoded}`;
+  }
+  window.open(url, '_blank');
+}
+
+async function copyTrainerMessage() {
+  const msg = buildTrainerMessage();
+  try {
+    await navigator.clipboard.writeText(msg);
+    showToast('Message copied to clipboard', 'success');
+  } catch (e) {
+    // Fallback for older browsers / non-https contexts
+    const ta = document.createElement('textarea');
+    ta.value = msg;
+    ta.style.position = 'fixed';
+    ta.style.left = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      showToast('Message copied', 'success');
+    } catch (err) {
+      showToast('Copy failed — long-press the preview to copy', 'error');
+    }
+    document.body.removeChild(ta);
+  }
+}
+
 function generatePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const { planned, actual, ateBreakdown } = computeAnalytics();
-  const today = new Date(); const dayObj = diet.days.find(d => d.id === currentDay) || { label: currentDay };
+  const reportDate = new Date(currentDate + 'T00:00:00');
+  const dayId = currentDay();
+  const dayObj = diet.days.find(d => d.id === dayId) || { label: dayId };
   const accent = [184,69,31], ink = [31,26,20], inkSoft = [90,79,63], inkFaint = [138,126,106], green = [74,107,58], red = [168,51,31], amber = [195,138,47];
   let y = 20;
   doc.setFontSize(22); doc.setTextColor(...ink); doc.setFont('helvetica', 'bold'); doc.text('Daily Meal Report', 20, y); y += 8;
-  doc.setFontSize(10); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`${currentUser?.email || 'User'} · ${today.toDateString()} · ${dayObj.label} · ${diet.name}`, 20, y); y += 10;
+  doc.setFontSize(10); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`${currentUser?.email || 'User'} · ${reportDate.toDateString()} · ${dayObj.label} · ${diet.name}`, 20, y); y += 10;
   doc.setDrawColor(...inkFaint); doc.setFillColor(248,244,230); doc.roundedRect(20, y, 170, 28, 3, 3, 'FD');
   doc.setFontSize(9); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'bold'); doc.text('PLANNED', 30, y+8); doc.text('ACTUALLY ATE', 90, y+8); doc.text('GAP', 150, y+8);
   doc.setFontSize(16); doc.setTextColor(...ink); doc.text(`${planned.cal} kcal`, 30, y+18); doc.setTextColor(...accent); doc.text(`${actual.cal} kcal`, 90, y+18);
@@ -1505,8 +1915,8 @@ function generatePDF() {
       doc.setTextColor(...inkFaint); doc.text(`${b.cal}kcal | ${b.pro}/${b.car}/${b.fat}`, 150, y); y += 6;
     });
   }
-  doc.setFontSize(8); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`Generated ${today.toLocaleString()} · ${diet.name}`, 20, 285);
-  doc.save(`meal-report-${today.toISOString().slice(0,10)}.pdf`); showToast('PDF generated', 'success');
+  doc.setFontSize(8); doc.setTextColor(...inkFaint); doc.setFont('helvetica', 'normal'); doc.text(`Generated ${new Date().toLocaleString()} · ${diet.name}`, 20, 285);
+  doc.save(`meal-report-${currentDate}.pdf`); showToast('PDF generated', 'success');
 }
 
 function clearTracking() {
@@ -1547,6 +1957,7 @@ function renderAll() {
   try { renderRules(); } catch (e) { console.error('[Render] rules failed:', e); }
   try { renderDietTab(); } catch (e) { console.error('[Render] diet tab failed:', e); }
   try { renderStorageInfo(); } catch (e) { console.error('[Render] storage info failed:', e); }
+  try { renderTrainerPreview(); } catch (e) { console.error('[Render] trainer preview failed:', e); }
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -1557,7 +1968,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'cook') renderCooking();
     if (tab.dataset.tab === 'analytics') renderAnalytics();
-    if (tab.dataset.tab === 'data') renderStorageInfo();
+    if (tab.dataset.tab === 'data') { renderStorageInfo(); renderTrainerPreview(); }
     if (tab.dataset.tab === 'diet') renderDietTab();
   });
 });
@@ -1566,6 +1977,8 @@ document.getElementById('extra-add').addEventListener('click', addExtra);
 document.getElementById('btn-export').addEventListener('click', exportJSON);
 document.getElementById('btn-import').addEventListener('click', importJSON);
 document.getElementById('btn-pdf').addEventListener('click', generatePDF);
+document.getElementById('btn-whatsapp').addEventListener('click', sendViaWhatsApp);
+document.getElementById('btn-copy-msg').addEventListener('click', copyTrainerMessage);
 document.getElementById('btn-clear').addEventListener('click', clearTracking);
 document.getElementById('file-import').addEventListener('change', handleFileImport);
 document.getElementById('btn-diet-upload').addEventListener('click', uploadDiet);
@@ -1631,8 +2044,8 @@ async function pullAndMergeIfNewer() {
     if (local && new Date(cloud.updated_at) <= new Date(local.lastSaved || 0)) return; // local is newer
     // Cloud is newer - merge
     selected = cloud.selected || {};
-    ateState = cloud.dateKey === todayDateKey ? (cloud.ateState || {}) : {};
-    extras = cloud.dateKey === todayDateKey ? (cloud.extras || []) : [];
+    ateState = cloud.dateKey === todayISO() ? (cloud.ateState || {}) : {};
+    extras = cloud.dateKey === todayISO() ? (cloud.extras || []) : [];
     shopChecks = cloud.shopChecks || {};
     fillSelectionsFromDiet();
     saveTrackingLocal();
